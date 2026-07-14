@@ -1,0 +1,3308 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppContext } from '../../src/contexts/AppContext';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+interface Task {
+  id: string;
+  day: number;
+  task: string;
+  area: string;
+  completed: boolean;
+}
+
+export default function OggiScreen() {
+  const { user, isGuest, screeningResult } = useAppContext();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
+  const [showCheckin, setShowCheckin] = useState(false);
+  const [checkinData, setCheckinData] = useState({ energia: 0, umore: 0, sonno: 0 });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      const userId = isGuest ? null : user?.id;
+      const response = await fetch(`${API_URL}/api/piano/tasks?user_id=${userId || ''}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setTasks(data);
+        // Get today's tasks (first 3 for simplicity)
+        const today = data.slice(0, 3);
+        setTodayTasks(today);
+      }
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+    }
+  };
+
+  const toggleTask = async (taskId: string, completed: boolean) => {
+    try {
+      const response = await fetch(`${API_URL}/api/piano/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId, completed: !completed }),
+      });
+
+      if (response.ok) {
+        setTodayTasks(todayTasks.map(t => 
+          t.id === taskId ? { ...t, completed: !completed } : t
+        ));
+      }
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile aggiornare il task');
+    }
+  };
+
+  const submitCheckin = async () => {
+    if (checkinData.energia === 0 || checkinData.umore === 0 || checkinData.sonno === 0) {
+      Alert.alert('Attenzione', 'Completa tutte le domande');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/checkin/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: isGuest ? null : user?.id,
+          ...checkinData,
+        }),
+      });
+
+      if (response.ok) {
+        Alert.alert('Successo', 'Check-in completato!');
+        setShowCheckin(false);
+        setCheckinData({ energia: 0, umore: 0, sonno: 0 });
+      }
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile salvare il check-in');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completedCount = todayTasks.filter(t => t.completed).length;
+  const progress = todayTasks.length > 0 ? (completedCount / todayTasks.length) * 100 : 0;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Ciao! 🌿</Text>
+            <Text style={styles.date}>
+              {new Date().toLocaleDateString('it-IT', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long' 
+              })}
+            </Text>
+          </View>
+
+          {screeningResult && (
+            <View style={styles.scoreCard}>
+              <View style={styles.scoreContent}>
+                <Text style={styles.scoreLabel}>Il tuo Indice IOBIO</Text>
+                <Text style={styles.scoreValue}>{screeningResult.indice_iobio}</Text>
+              </View>
+              <Ionicons name="leaf" size={48} color="#7CB342" />
+            </View>
+          )}
+
+          <TouchableOpacity 
+            style={styles.checkinButton}
+            onPress={() => setShowCheckin(true)}
+          >
+            <Ionicons name="heart-circle" size={32} color="#7CB342" />
+            <View style={styles.checkinContent}>
+              <Text style={styles.checkinTitle}>Check-in giornaliero</Text>
+              <Text style={styles.checkinSubtitle}>1 minuto per il tuo benessere</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+          </TouchableOpacity>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
+            {todayTasks.length > 0 ? (
+              <>
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, { width: `${progress}%` }]} />
+                  </View>
+                  <Text style={styles.progressText}>{completedCount}/{todayTasks.length}</Text>
+                </View>
+                {todayTasks.map((task) => (
+                  <TouchableOpacity
+                    key={task.id}
+                    style={styles.taskItem}
+                    onPress={() => toggleTask(task.id, task.completed)}
+                  >
+                    <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
+                      {task.completed && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+                    </View>
+                    <View style={styles.taskContent}>
+                      <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]}>
+                        {task.task}
+                      </Text>
+                      <Text style={styles.taskArea}>{task.area}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="fitness" size={64} color="#E0E0E0" />
+                <Text style={styles.emptyText}>Completa lo screening per vedere i tuoi task</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      <Modal
+        visible={showCheckin}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCheckin(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Check-in Giornaliero</Text>
+              <TouchableOpacity onPress={() => setShowCheckin(false)}>
+                <Ionicons name="close" size={28} color="#4A4A4A" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.checkinQuestion}>
+              <Text style={styles.questionText}>Come ti senti oggi?</Text>
+              
+              <Text style={styles.questionLabel}>Energia</Text>
+              <View style={styles.scaleContainer}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.scaleButton,
+                      checkinData.energia === value && styles.scaleButtonSelected,
+                    ]}
+                    onPress={() => setCheckinData({ ...checkinData, energia: value })}
+                  >
+                    <Text
+                      style={[
+                        styles.scaleButtonText,
+                        checkinData.energia === value && styles.scaleButtonTextSelected,
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.questionLabel}>Umore</Text>
+              <View style={styles.scaleContainer}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.scaleButton,
+                      checkinData.umore === value && styles.scaleButtonSelected,
+                    ]}
+                    onPress={() => setCheckinData({ ...checkinData, umore: value })}
+                  >
+                    <Text
+                      style={[
+                        styles.scaleButtonText,
+                        checkinData.umore === value && styles.scaleButtonTextSelected,
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.questionLabel}>Qualità del sonno</Text>
+              <View style={styles.scaleContainer}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[
+                      styles.scaleButton,
+                      checkinData.sonno === value && styles.scaleButtonSelected,
+                    ]}
+                    onPress={() => setCheckinData({ ...checkinData, sonno: value })}
+                  >
+                    <Text
+                      style={[
+                        styles.scaleButtonText,
+                        checkinData.sonno === value && styles.scaleButtonTextSelected,
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+              onPress={submitCheckin}
+              disabled={loading}
+            >
+              <Text style={styles.submitButtonText}>
+                {loading ? 'Salvataggio...' : 'Completa Check-in'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    padding: 24,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  greeting: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+  },
+  date: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 4,
+    textTransform: 'capitalize',
+  },
+  scoreCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  scoreContent: {
+    flex: 1,
+  },
+  scoreLabel: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 4,
+  },
+  scoreValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#7CB342',
+  },
+  checkinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  checkinContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  checkinTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4A4A4A',
+  },
+  checkinSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 2,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    marginBottom: 16,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#7CB342',
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7CB342',
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#7CB342',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: '#7CB342',
+  },
+  taskContent: {
+    flex: 1,
+  },
+  taskText: {
+    fontSize: 16,
+    color: '#4A4A4A',
+    marginBottom: 4,
+  },
+  taskTextCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  taskArea: {
+    fontSize: 12,
+    color: '#7CB342',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#F5F5DC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+  },
+  checkinQuestion: {
+    marginBottom: 24,
+  },
+  questionText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  questionLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4A4A4A',
+    marginBottom: 12,
+    marginTop: 16,
+  },
+  scaleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  scaleButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scaleButtonSelected: {
+    backgroundColor: '#7CB342',
+    borderColor: '#7CB342',
+  },
+  scaleButtonText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#666',
+  },
+  scaleButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  submitButton: {
+    backgroundColor: '#7CB342',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppContext } from '../../src/contexts/AppContext';
+
+// Conditionally import victory-native only on mobile
+let VictoryPolarAxis: any = null;
+let VictoryChart: any = null;
+let VictoryArea: any = null;
+let VictoryLine: any = null;
+let VictoryAxis: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const victory = require('victory-native');
+    VictoryPolarAxis = victory.VictoryPolarAxis;
+    VictoryChart = victory.VictoryChart;
+    VictoryArea = victory.VictoryArea;
+    VictoryLine = victory.VictoryLine;
+    VictoryAxis = victory.VictoryAxis;
+  } catch (e) {
+    console.log('Victory Native not available');
+  }
+}
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const isWeb = Platform.OS === 'web';
+
+export default function MappaScreen() {
+  const { user, isGuest, screeningResult } = useAppContext();
+  const [checkinHistory, setCheckinHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadCheckinHistory();
+  }, []);
+
+  const loadCheckinHistory = async () => {
+    try {
+      const userId = isGuest ? null : user?.id;
+      const response = await fetch(`${API_URL}/api/checkin/history?user_id=${userId || ''}&days=14`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setCheckinHistory(data);
+      }
+    } catch (error) {
+      console.error('Error loading checkin history:', error);
+    }
+  };
+
+  // Prepare trend data
+  const trendData = checkinHistory.slice(0, 7).reverse().map((checkin, index) => {
+    const avg = (checkin.energia + checkin.umore + checkin.sonno) / 3;
+    return {
+      x: index + 1,
+      y: (avg / 5) * 100, // Convert to 0-100 scale
+    };
+  });
+
+  const getJourneyStage = (score: number) => {
+    if (score >= 70) return { stage: 'Fioritura', icon: 'flower', color: '#7CB342', description: 'Il tuo benessere è in piena fioritura!' };
+    if (score >= 40) return { stage: 'Crescita', icon: 'leaf', color: '#FFA726', description: 'Stai crescendo bene, continua così!' };
+    return { stage: 'Semina', icon: 'water', color: '#42A5F5', description: 'Stai piantando i semi del benessere' };
+  };
+
+  const currentStage = screeningResult ? getJourneyStage(screeningResult.indice_iobio) : null;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Il tuo Percorso</Text>
+          <Text style={styles.subtitle}>Mappa visiva del benessere</Text>
+
+          {screeningResult && currentStage && (
+            <>
+              <View style={styles.journeyCard}>
+                <View style={styles.journeyHeader}>
+                  <Ionicons name={currentStage.icon as any} size={48} color={currentStage.color} />
+                  <View style={styles.journeyContent}>
+                    <Text style={styles.journeyStage}>{currentStage.stage}</Text>
+                    <Text style={styles.journeyDescription}>{currentStage.description}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.chartCard}>
+                <Text style={styles.sectionTitle}>Le tue aree di benessere</Text>
+                {isWeb ? (
+                  <View style={{ padding: 20, width: '100%' }}>
+                    <Text style={{ color: '#999', textAlign: 'center', marginBottom: 16 }}>
+                      📱 Grafici disponibili su mobile
+                    </Text>
+                    {Object.keys(screeningResult.area_scores).map((area, index) => (
+                      <View key={index} style={{ 
+                        flexDirection: 'row', 
+                        justifyContent: 'space-between',
+                        paddingVertical: 8,
+                        borderBottomWidth: 1,
+                        borderBottomColor: '#F0F0F0'
+                      }}>
+                        <Text style={{ color: '#4A4A4A', fontSize: 14 }}>{area}</Text>
+                        <Text style={{ color: '#7CB342', fontSize: 14, fontWeight: '600' }}>
+                          {screeningResult.area_scores[area]}/100
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <VictoryChart
+                    polar
+                    domain={{ y: [0, 100] }}
+                    height={300}
+                    width={350}
+                  >
+                    {Object.keys(screeningResult.area_scores).map((key, i) => (
+                      <VictoryPolarAxis
+                        key={i}
+                        dependentAxis
+                        style={{
+                          axisLabel: { padding: 10, fontSize: 10 },
+                          axis: { stroke: 'none' },
+                          grid: { stroke: '#E0E0E0', strokeWidth: 0.5 },
+                          tickLabels: { fill: 'transparent' },
+                        }}
+                        axisValue={i + 1}
+                      />
+                    ))}
+                    <VictoryPolarAxis
+                      labelPlacement="perpendicular"
+                      style={{
+                        axisLabel: { padding: 20, fontSize: 11, fill: '#666' },
+                        axis: { stroke: 'none' },
+                        grid: { stroke: '#E0E0E0', strokeWidth: 1 },
+                      }}
+                      tickValues={Object.keys(screeningResult.area_scores).map((_, i) => i + 1)}
+                      tickFormat={(t) => {
+                        const area = Object.keys(screeningResult.area_scores)[t - 1];
+                        return area && area.length > 12 ? area.substring(0, 10) + '...' : area;
+                      }}
+                    />
+                    <VictoryArea
+                      data={Object.keys(screeningResult.area_scores).map((area) => ({
+                        x: area.length > 15 ? area.substring(0, 12) + '...' : area,
+                        y: screeningResult.area_scores[area],
+                      }))}
+                      style={{
+                        data: {
+                          fill: '#7CB342',
+                          fillOpacity: 0.3,
+                          stroke: '#7CB342',
+                          strokeWidth: 2,
+                        },
+                      }}
+                    />
+                  </VictoryChart>
+                )}
+              </View>
+            </>
+          )}
+
+          {trendData.length > 0 && (
+            <View style={styles.chartCard}>
+              <Text style={styles.sectionTitle}>Andamento ultimi 7 giorni</Text>
+              <Text style={styles.chartSubtitle}>Media giornaliera (energia, umore, sonno)</Text>
+              {isWeb ? (
+                <View style={{ padding: 20 }}>
+                  <Text style={{ color: '#999', textAlign: 'center' }}>
+                    📱 Grafici disponibili su mobile
+                  </Text>
+                </View>
+              ) : (
+                <VictoryChart
+                  height={250}
+                  width={350}
+                  domain={{ y: [0, 100] }}
+                >
+                  <VictoryAxis
+                    style={{
+                      axis: { stroke: '#E0E0E0' },
+                      tickLabels: { fontSize: 10, fill: '#666' },
+                    }}
+                  />
+                  <VictoryAxis
+                    dependentAxis
+                    style={{
+                      axis: { stroke: '#E0E0E0' },
+                      tickLabels: { fontSize: 10, fill: '#666' },
+                      grid: { stroke: '#E0E0E0', strokeWidth: 0.5 },
+                    }}
+                  />
+                  <VictoryLine
+                    data={trendData}
+                    style={{
+                      data: { stroke: '#7CB342', strokeWidth: 3 },
+                    }}
+                    interpolation="natural"
+                  />
+                </VictoryChart>
+              )}
+            </View>
+          )}
+
+          {!screeningResult && (
+            <View style={styles.emptyState}>
+              <Ionicons name="map-outline" size={64} color="#E0E0E0" />
+              <Text style={styles.emptyText}>Completa lo screening per vedere la tua mappa del benessere</Text>
+            </View>
+          )}
+
+          <View style={styles.journeyStages}>
+            <Text style={styles.sectionTitle}>Le fasi del tuo viaggio</Text>
+            
+            <View style={styles.stageItem}>
+              <Ionicons name="water" size={32} color="#42A5F5" />
+              <View style={styles.stageContent}>
+                <Text style={styles.stageName}>Semina</Text>
+                <Text style={styles.stageText}>Inizi a prenderti cura di te, piantando i semi del cambiamento</Text>
+              </View>
+            </View>
+
+            <View style={styles.stageItem}>
+              <Ionicons name="leaf" size={32} color="#FFA726" />
+              <View style={styles.stageContent}>
+                <Text style={styles.stageName}>Crescita</Text>
+                <Text style={styles.stageText}>Le nuove abitudini crescono e si rafforzano</Text>
+              </View>
+            </View>
+
+            <View style={styles.stageItem}>
+              <Ionicons name="flower" size={32} color="#7CB342" />
+              <View style={styles.stageContent}>
+                <Text style={styles.stageName}>Fioritura</Text>
+                <Text style={styles.stageText}>Il tuo benessere è in piena fioritura, continua a coltivarlo</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    padding: 24,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#999',
+    marginBottom: 24,
+  },
+  journeyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  journeyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  journeyContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  journeyStage: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+    marginBottom: 4,
+  },
+  journeyDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    marginBottom: 16,
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  journeyStages: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  stageItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  stageContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  stageName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    marginBottom: 4,
+  },
+  stageText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 48,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 16,
+  },
+});
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppContext } from '../../src/contexts/AppContext';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export default function AICoachScreen() {
+  const { user, isGuest } = useAppContext();
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content: 'Ciao! 🌿 Sono il tuo AI Coach per il benessere. Come posso aiutarti oggi?',
+      timestamp: new Date().toISOString(),
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const sendMessage = async () => {
+    if (!inputText.trim()) return;
+
+    const userMessage: Message = {
+      role: 'user',
+      content: inputText,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages([...messages, userMessage]);
+    setInputText('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: isGuest ? null : user?.id,
+          message: inputText,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Errore', data.detail || 'Errore durante la comunicazione');
+        setLoading(false);
+        return;
+      }
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.response,
+        timestamp: data.timestamp,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile connettersi al server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Scroll to bottom when messages update
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [messages]);
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Ionicons name="sparkles" size={32} color="#7CB342" />
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>AI Coach</Text>
+            <Text style={styles.headerSubtitle}>Il tuo assistente per il benessere</Text>
+          </View>
+        </View>
+        <View style={styles.disclaimer}>
+          <Ionicons name="information-circle" size={16} color="#FFA726" />
+          <Text style={styles.disclaimerText}>Non sostituisce consulenza medica</Text>
+        </View>
+      </View>
+
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+        keyboardVerticalOffset={100}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={styles.messagesContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          {messages.map((message, index) => (
+            <View
+              key={index}
+              style={[
+                styles.messageBubble,
+                message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+              ]}
+            >
+              {message.role === 'assistant' && (
+                <Ionicons name="leaf" size={20} color="#7CB342" style={styles.messageIcon} />
+              )}
+              <View style={styles.messageContent}>
+                <Text
+                  style={[
+                    styles.messageText,
+                    message.role === 'user' ? styles.userText : styles.assistantText,
+                  ]}
+                >
+                  {message.content}
+                </Text>
+              </View>
+            </View>
+          ))}
+          {loading && (
+            <View style={[styles.messageBubble, styles.assistantBubble]}>
+              <Ionicons name="leaf" size={20} color="#7CB342" style={styles.messageIcon} />
+              <View style={styles.messageContent}>
+                <Text style={styles.assistantText}>Sto pensando...</Text>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Scrivi un messaggio..."
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, (!inputText.trim() || loading) && styles.sendButtonDisabled]}
+            onPress={sendMessage}
+            disabled={!inputText.trim() || loading}
+          >
+            <Ionicons name="send" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  header: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#999',
+  },
+  disclaimer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    padding: 8,
+    borderRadius: 8,
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#F57C00',
+    marginLeft: 8,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  messagesContainer: {
+    padding: 16,
+    flexGrow: 1,
+  },
+  messageBubble: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    maxWidth: '85%',
+  },
+  userBubble: {
+    alignSelf: 'flex-end',
+  },
+  assistantBubble: {
+    alignSelf: 'flex-start',
+  },
+  messageIcon: {
+    marginRight: 8,
+    marginTop: 4,
+  },
+  messageContent: {
+    flex: 1,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+    padding: 12,
+    borderRadius: 16,
+  },
+  userText: {
+    backgroundColor: '#7CB342',
+    color: '#FFFFFF',
+    borderBottomRightRadius: 4,
+  },
+  assistantText: {
+    backgroundColor: '#FFFFFF',
+    color: '#4A4A4A',
+    borderBottomLeftRadius: 4,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    alignItems: 'flex-end',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    maxHeight: 100,
+    marginRight: 8,
+  },
+  sendButton: {
+    backgroundColor: '#7CB342',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.4,
+  },
+});
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  ActivityIndicator,
+  RefreshControl 
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppContext } from '../../src/contexts/AppContext';
+
+// Types
+interface PianoTask {
+  id: string;
+  day: number;
+  task: string;
+  area: string;
+  completed: boolean;
+}
+
+interface ScreeningResult {
+  indice_iobio: number;
+  area_scores: { [key: string]: number };
+  weak_areas: string[];
+}
+
+// Area icons mapping
+const AREA_ICONS: { [key: string]: string } = {
+  'Nutrizione': 'nutrition',
+  'Movimento': 'walk',
+  'Sonno': 'moon',
+  'Stress': 'leaf',
+  'Relazioni': 'people',
+  'Mente': 'bulb',
+  'Ambiente': 'earth',
+};
+
+// Local task templates for guest mode fallback
+const TASK_TEMPLATES: { [key: string]: string[] } = {
+  'Nutrizione': [
+    'Bevi 8 bicchieri d\'acqua oggi',
+    'Mangia almeno 5 porzioni di frutta/verdura',
+    'Evita cibi processati per oggi',
+    'Prepara un pasto sano fatto in casa',
+    'Aggiungi una nuova verdura alla tua dieta',
+  ],
+  'Movimento': [
+    'Fai 10 minuti di stretching mattutino',
+    'Cammina almeno 5000 passi oggi',
+    'Fai 15 minuti di esercizio fisico',
+    'Prendi le scale invece dell\'ascensore',
+    'Fai una passeggiata dopo pranzo',
+  ],
+  'Sonno': [
+    'Vai a letto entro le 23:00',
+    'Evita schermi 1 ora prima di dormire',
+    'Crea una routine serale rilassante',
+    'Mantieni la camera da letto fresca e buia',
+    'Pratica 5 minuti di respirazione prima di dormire',
+  ],
+  'Stress': [
+    'Pratica 5 minuti di meditazione',
+    'Fai 3 respiri profondi ogni ora',
+    'Dedica 15 minuti a un hobby rilassante',
+    'Scrivi 3 cose per cui sei grato',
+    'Fai una pausa consapevole dal lavoro',
+  ],
+  'Relazioni': [
+    'Chiama un amico o familiare',
+    'Dedica tempo di qualità a chi ami',
+    'Fai un complimento sincero a qualcuno',
+    'Pianifica un\'uscita sociale questa settimana',
+    'Scrivi un messaggio affettuoso a una persona cara',
+  ],
+  'Mente': [
+    'Leggi per 15 minuti',
+    'Impara qualcosa di nuovo oggi',
+    'Fai un puzzle o gioco mentale',
+    'Scrivi nel tuo diario per 10 minuti',
+    'Pratica la mindfulness per 5 minuti',
+  ],
+  'Ambiente': [
+    'Riordina un angolo della tua casa',
+    'Passa 15 minuti nella natura',
+    'Apri le finestre per arieggiare',
+    'Riduci l\'uso di plastica oggi',
+    'Cura una pianta o il giardino',
+  ],
+};
+
+// Generate local 30-day plan based on screening results
+const generateLocalPlan = (screeningResult: ScreeningResult | null): PianoTask[] => {
+  const tasks: PianoTask[] = [];
+  
+  // Determine which areas to focus on
+  let focusAreas: string[] = [];
+  
+  if (screeningResult && screeningResult.weak_areas && screeningResult.weak_areas.length > 0) {
+    focusAreas = screeningResult.weak_areas;
+  } else {
+    // Default areas if no screening result
+    focusAreas = ['Nutrizione', 'Movimento', 'Sonno', 'Stress'];
+  }
+  
+  // Generate 30 days of tasks
+  for (let day = 1; day <= 30; day++) {
+    // Rotate through focus areas
+    const areaIndex = (day - 1) % focusAreas.length;
+    const area = focusAreas[areaIndex];
+    
+    // Get tasks for this area
+    const areaTasks = TASK_TEMPLATES[area] || TASK_TEMPLATES['Nutrizione'];
+    const taskIndex = Math.floor((day - 1) / focusAreas.length) % areaTasks.length;
+    
+    tasks.push({
+      id: `local_task_${day}`,
+      day,
+      task: areaTasks[taskIndex],
+      area,
+      completed: false,
+    });
+  }
+  
+  return tasks;
+};
+
+export default function PianoScreen() {
+  const router = useRouter();
+  const { user, isGuest, screeningResult } = useAppContext();
+  
+  const [tasks, setTasks] = useState<PianoTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentDay, setCurrentDay] = useState(1);
+  const [expandedDays, setExpandedDays] = useState<number[]>([]);
+  
+  // Calculate current day based on plan start date
+  useEffect(() => {
+    const calculateCurrentDay = async () => {
+      try {
+        const startDateStr = await AsyncStorage.getItem('piano_start_date');
+        if (startDateStr) {
+          const startDate = new Date(startDateStr);
+          const today = new Date();
+          const diffTime = today.getTime() - startDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          setCurrentDay(Math.min(Math.max(diffDays, 1), 30));
+        } else {
+          // Set start date if not exists
+          await AsyncStorage.setItem('piano_start_date', new Date().toISOString());
+          setCurrentDay(1);
+        }
+      } catch (error) {
+        console.error('Error calculating current day:', error);
+        setCurrentDay(1);
+      }
+    };
+    
+    calculateCurrentDay();
+  }, []);
+  
+  // Load tasks
+  const loadTasks = useCallback(async () => {
+    try {
+      // First try to load from local storage
+      const savedTasks = await AsyncStorage.getItem('piano_tasks');
+      
+      if (savedTasks) {
+        setTasks(JSON.parse(savedTasks));
+        setLoading(false);
+        return;
+      }
+      
+      // If no saved tasks, generate new plan
+      const newTasks = generateLocalPlan(screeningResult);
+      setTasks(newTasks);
+      
+      // Save to local storage
+      await AsyncStorage.setItem('piano_tasks', JSON.stringify(newTasks));
+      
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      // Generate fallback tasks
+      const fallbackTasks = generateLocalPlan(screeningResult);
+      setTasks(fallbackTasks);
+    } finally {
+      setLoading(false);
+    }
+  }, [screeningResult]);
+  
+  useEffect(() => {
+    loadTasks();
+    // Expand current day by default
+    setExpandedDays([currentDay]);
+  }, [loadTasks, currentDay]);
+  
+  // Handle refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadTasks();
+    setRefreshing(false);
+  }, [loadTasks]);
+  
+  // Toggle task completion
+  const toggleTaskCompletion = async (taskId: string) => {
+    const updatedTasks = tasks.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
+    
+    setTasks(updatedTasks);
+    
+    // Save to local storage
+    try {
+      await AsyncStorage.setItem('piano_tasks', JSON.stringify(updatedTasks));
+    } catch (error) {
+      console.error('Error saving task completion:', error);
+    }
+  };
+  
+  // Toggle day expansion
+  const toggleDayExpansion = (day: number) => {
+    setExpandedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
+  
+  // Calculate progress
+  const completedTasks = tasks.filter(t => t.completed).length;
+  const progressPercentage = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  
+  // Get today's task
+  const todayTask = tasks.find(t => t.day === currentDay);
+  
+  // Group tasks by day
+  const tasksByDay: { [key: number]: PianoTask[] } = {};
+  tasks.forEach(task => {
+    if (!tasksByDay[task.day]) {
+      tasksByDay[task.day] = [];
+    }
+    tasksByDay[task.day].push(task);
+  });
+  
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#7CB342" />
+          <Text style={styles.loadingText}>Caricamento piano...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7CB342']} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Piano 30 Giorni</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        
+        {/* Progress Card */}
+        <View style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <Ionicons name="trophy" size={32} color="#FFB300" />
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressTitle}>Il tuo progresso</Text>
+              <Text style={styles.progressSubtitle}>
+                Giorno {currentDay} di 30
+              </Text>
+            </View>
+            <View style={styles.progressCircle}>
+              <Text style={styles.progressPercentage}>{progressPercentage}%</Text>
+            </View>
+          </View>
+          
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${progressPercentage}%` }]} />
+          </View>
+          
+          <Text style={styles.progressStats}>
+            {completedTasks} di {tasks.length} attività completate
+          </Text>
+        </View>
+        
+        {/* Today's Focus Card */}
+        {todayTask && (
+          <View style={styles.todayCard}>
+            <View style={styles.todayHeader}>
+              <View style={styles.todayBadge}>
+                <Text style={styles.todayBadgeText}>OGGI</Text>
+              </View>
+              <Text style={styles.todayArea}>{todayTask.area}</Text>
+            </View>
+            
+            <Text style={styles.todayTask}>{todayTask.task}</Text>
+            
+            <TouchableOpacity 
+              style={[
+                styles.todayButton,
+                todayTask.completed && styles.todayButtonCompleted
+              ]}
+              onPress={() => toggleTaskCompletion(todayTask.id)}
+            >
+              <Ionicons 
+                name={todayTask.completed ? "checkmark-circle" : "circle-outline"} 
+                size={24} 
+                color={todayTask.completed ? "#FFFFFF" : "#7CB342"} 
+              />
+              <Text style={[
+                styles.todayButtonText,
+                todayTask.completed && styles.todayButtonTextCompleted
+              ]}>
+                {todayTask.completed ? 'Completato!' : 'Segna come completato'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Days List */}
+        <View style={styles.daysSection}>
+          <Text style={styles.daysSectionTitle}>Tutte le attività</Text>
+          
+          {Array.from({ length: 30 }, (_, i) => i + 1).map(day => {
+            const dayTasks = tasksByDay[day] || [];
+            const isExpanded = expandedDays.includes(day);
+            const isCurrentDay = day === currentDay;
+            const isPastDay = day < currentDay;
+            const dayCompleted = dayTasks.every(t => t.completed);
+            
+            return (
+              <View key={day} style={styles.dayContainer}>
+                <TouchableOpacity 
+                  style={[
+                    styles.dayHeader,
+                    isCurrentDay && styles.dayHeaderCurrent,
+                    dayCompleted && isPastDay && styles.dayHeaderCompleted,
+                  ]}
+                  onPress={() => toggleDayExpansion(day)}
+                >
+                  <View style={styles.dayInfo}>
+                    <View style={[
+                      styles.dayNumber,
+                      isCurrentDay && styles.dayNumberCurrent,
+                      dayCompleted && styles.dayNumberCompleted,
+                    ]}>
+                      {dayCompleted ? (
+                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      ) : (
+                        <Text style={[
+                          styles.dayNumberText,
+                          isCurrentDay && styles.dayNumberTextCurrent,
+                        ]}>
+                          {day}
+                        </Text>
+                      )}
+                    </View>
+                    <View>
+                      <Text style={styles.dayTitle}>
+                        Giorno {day}
+                        {isCurrentDay && ' (Oggi)'}
+                      </Text>
+                      {dayTasks.length > 0 && (
+                        <Text style={styles.dayArea}>
+                          {dayTasks[0].area}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  
+                  <Ionicons 
+                    name={isExpanded ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color="#999" 
+                  />
+                </TouchableOpacity>
+                
+                {isExpanded && dayTasks.length > 0 && (
+                  <View style={styles.dayContent}>
+                    {dayTasks.map(task => (
+                      <TouchableOpacity 
+                        key={task.id}
+                        style={styles.taskItem}
+                        onPress={() => toggleTaskCompletion(task.id)}
+                      >
+                        <Ionicons 
+                          name={task.completed ? "checkbox" : "square-outline"} 
+                          size={24} 
+                          color={task.completed ? "#7CB342" : "#BDBDBD"} 
+                        />
+                        <Text style={[
+                          styles.taskText,
+                          task.completed && styles.taskTextCompleted
+                        ]}>
+                          {task.task}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+        
+        {/* Guest Mode Notice */}
+        {isGuest && (
+          <View style={styles.guestNotice}>
+            <Ionicons name="information-circle" size={20} color="#FF9800" />
+            <Text style={styles.guestNoticeText}>
+              Modalità Guest: i progressi sono salvati localmente sul dispositivo.
+            </Text>
+          </View>
+        )}
+        
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.buildLabel}>Build: PIANO-SDK-003</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  progressTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+  },
+  progressSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 2,
+  },
+  progressCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressPercentage: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#7CB342',
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#7CB342',
+    borderRadius: 4,
+  },
+  progressStats: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  todayCard: {
+    backgroundColor: '#7CB342',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  todayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  todayBadge: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  todayBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  todayArea: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    marginLeft: 12,
+  },
+  todayTask: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 26,
+    marginBottom: 16,
+  },
+  todayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+  },
+  todayButtonCompleted: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  todayButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7CB342',
+    marginLeft: 8,
+  },
+  todayButtonTextCompleted: {
+    color: '#FFFFFF',
+  },
+  daysSection: {
+    marginTop: 8,
+  },
+  daysSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+    marginBottom: 12,
+  },
+  dayContainer: {
+    marginBottom: 8,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+  },
+  dayHeaderCurrent: {
+    borderWidth: 2,
+    borderColor: '#7CB342',
+  },
+  dayHeaderCompleted: {
+    backgroundColor: '#E8F5E9',
+  },
+  dayInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dayNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  dayNumberCurrent: {
+    backgroundColor: '#7CB342',
+  },
+  dayNumberCompleted: {
+    backgroundColor: '#7CB342',
+  },
+  dayNumberText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  dayNumberTextCurrent: {
+    color: '#FFFFFF',
+  },
+  dayTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A4A4A',
+  },
+  dayArea: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 2,
+  },
+  dayContent: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+    marginLeft: 44,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  taskText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#4A4A4A',
+    marginLeft: 12,
+    lineHeight: 22,
+  },
+  taskTextCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#999',
+  },
+  guestNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+  },
+  guestNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#F57C00',
+    marginLeft: 10,
+    lineHeight: 18,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 24,
+    paddingTop: 16,
+  },
+  buildLabel: {
+    fontSize: 11,
+    color: '#7CB342',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+});
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppContext } from '../../src/contexts/AppContext';
+import { LinearGradient } from 'expo-linear-gradient';
+
+// Conditionally import victory-native only on mobile
+let VictoryPolarAxis: any = null;
+let VictoryChart: any = null;
+let VictoryArea: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const victory = require('victory-native');
+    VictoryPolarAxis = victory.VictoryPolarAxis;
+    VictoryChart = victory.VictoryChart;
+    VictoryArea = victory.VictoryArea;
+  } catch (e) {
+    console.log('Victory Native not available');
+  }
+}
+
+const isWeb = Platform.OS === 'web';
+
+const AREA_ACTIONS = {
+  'Energia': 'Inizia la giornata con 10 minuti di movimento',
+  'Sonno': 'Crea una routine serale rilassante',
+  'Stress': 'Pratica 5 minuti di respirazione profonda',
+  'Movimento': 'Aggiungi una camminata di 15 minuti',
+  'Alimentazione': 'Pianifica pasti sani per la settimana',
+  'Pelle': 'Idrata la pelle mattina e sera',
+  'Equilibrio mentale': 'Dedica tempo alla mindfulness',
+};
+
+const AREA_NAMES: { [key: string]: string } = {
+  'Energia': 'Energia',
+  'Sonno': 'Sonno',
+  'Stress': 'Gestione dello Stress',
+  'Movimento': 'Attività Fisica',
+  'Alimentazione': 'Alimentazione',
+  'Pelle': 'Cura della Pelle',
+  'Equilibrio mentale': 'Equilibrio Mentale',
+};
+
+export default function ResultsScreen() {
+  const router = useRouter();
+  const { screeningResult } = useAppContext();
+
+  if (!screeningResult) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.errorText}>Nessun risultato disponibile</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const { indice_iobio, area_scores, weak_areas } = screeningResult;
+
+  const getScoreInterpretation = (score: number) => {
+    if (score >= 80) return {
+      title: 'Eccellente!',
+      description: 'Il tuo benessere è in ottima forma. Continua con le tue buone abitudini!',
+      color: ['#7CB342', '#9CCC65'],
+      icon: 'trophy',
+    };
+    if (score >= 60) return {
+      title: 'Buon Livello',
+      description: 'Hai una buona base di benessere. Con piccoli miglioramenti puoi eccellere!',
+      color: ['#FFA726', '#FFB74D'],
+      icon: 'star',
+    };
+    if (score >= 40) return {
+      title: 'In Crescita',
+      description: 'Ci sono margini di miglioramento. Il piano personalizzato ti aiuterà!',
+      color: ['#42A5F5', '#64B5F6'],
+      icon: 'trending-up',
+    };
+    return {
+      title: 'Inizia Ora',
+      description: 'Questo è il momento perfetto per investire nel tuo benessere. Ogni passo conta!',
+      color: ['#EF5350', '#E57373'],
+      icon: 'leaf',
+    };
+  };
+
+  const interpretation = getScoreInterpretation(indice_iobio);
+
+  const chartData = Object.keys(area_scores).map(area => ({
+    x: area.length > 15 ? area.substring(0, 12) + '...' : area,
+    y: area_scores[area],
+  }));
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <LinearGradient
+            colors={interpretation.color}
+            style={styles.scoreCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name={interpretation.icon as any} size={48} color="#FFFFFF" />
+            <Text style={styles.scoreCardTitle}>{interpretation.title}</Text>
+            <View style={styles.scoreCircle}>
+              <Text style={styles.scoreValue}>{indice_iobio}</Text>
+              <Text style={styles.scoreLabel}>Indice IOBIO</Text>
+            </View>
+            <Text style={styles.scoreDescription}>{interpretation.description}</Text>
+          </LinearGradient>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>I tuoi Top 3 Focus</Text>
+            <Text style={styles.sectionSubtitle}>Aree dove concentrare l'attenzione</Text>
+
+            {weak_areas.map((area, index) => (
+              <View key={index} style={styles.focusCard}>
+                <View style={styles.focusHeader}>
+                  <View style={styles.focusRank}>
+                    <Text style={styles.focusRankText}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.focusInfo}>
+                    <Text style={styles.focusArea}>{area}</Text>
+                    <Text style={styles.focusScore}>{area_scores[area]}/100</Text>
+                  </View>
+                </View>
+                <Text style={styles.focusAction}>
+                  💡 {AREA_ACTIONS[area as keyof typeof AREA_ACTIONS]}
+                </Text>
+                <TouchableOpacity style={styles.addButton}>
+                  <Ionicons name="add-circle" size={20} color="#7CB342" />
+                  <Text style={styles.addButtonText}>Aggiungi al piano</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.soundCard}
+            onPress={() => router.replace('/(tabs)/suoni')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.soundCardLeft}>
+              <View style={styles.soundIconBg}>
+                <Ionicons name="musical-notes" size={24} color="#7CB342" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.soundCardTitle}>Ascolta la tua sessione consigliata</Text>
+                <Text style={styles.soundCardSub}>
+                  Frequenze selezionate per {AREA_NAMES[weak_areas[0]] || weak_areas[0]}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="#7CB342" />
+          </TouchableOpacity>
+
+          {!isWeb && (
+            <View style={styles.chartCard}>
+              <Text style={styles.sectionTitle}>Panoramica Completa</Text>
+              <VictoryChart
+                polar
+                domain={{ y: [0, 100] }}
+                height={280}
+                width={340}
+              >
+                {Object.keys(area_scores).map((key, i) => (
+                  <VictoryPolarAxis
+                    key={i}
+                    dependentAxis
+                    style={{
+                      axis: { stroke: 'none' },
+                      grid: { stroke: '#E0E0E0', strokeWidth: 0.5 },
+                      tickLabels: { fill: 'transparent' },
+                    }}
+                    axisValue={i + 1}
+                  />
+                ))}
+                <VictoryPolarAxis
+                  labelPlacement="perpendicular"
+                  style={{
+                    axisLabel: { padding: 20, fontSize: 10, fill: '#666' },
+                    axis: { stroke: 'none' },
+                    grid: { stroke: '#E0E0E0', strokeWidth: 1 },
+                  }}
+                  tickValues={Object.keys(area_scores).map((_, i) => i + 1)}
+                  tickFormat={(t) => {
+                    const area = Object.keys(area_scores)[t - 1];
+                    return area && area.length > 12 ? area.substring(0, 10) + '...' : area;
+                  }}
+                />
+                <VictoryArea
+                  data={chartData}
+                  style={{
+                    data: {
+                      fill: '#7CB342',
+                      fillOpacity: 0.3,
+                      stroke: '#7CB342',
+                      strokeWidth: 2,
+                    },
+                  }}
+                />
+              </VictoryChart>
+            </View>
+          )}
+
+          {isWeb && (
+            <View style={styles.chartCard}>
+              <Text style={styles.sectionTitle}>Tutte le Aree</Text>
+              <Text style={styles.webChartNote}>📱 Grafico radar disponibile su mobile</Text>
+              {Object.keys(area_scores).map((area, index) => (
+                <View key={index} style={styles.areaRow}>
+                  <Text style={styles.areaRowName}>{area}</Text>
+                  <View style={styles.areaRowBar}>
+                    <View style={[styles.areaRowFill, { width: `${area_scores[area]}%` }]} />
+                  </View>
+                  <Text style={styles.areaRowScore}>{area_scores[area]}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={() => router.replace('/(tabs)/oggi')}
+          >
+            <Text style={styles.ctaButtonText}>Vai al Piano Personalizzato</Text>
+            <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    padding: 24,
+  },
+  scoreCard: {
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  scoreCardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  scoreCircle: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  scoreValue: {
+    fontSize: 56,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  scoreLabel: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  scoreDescription: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 22,
+    opacity: 0.95,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 16,
+  },
+  focusCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  focusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  focusRank: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#7CB342',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  focusRankText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  focusInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  focusArea: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4A4A4A',
+  },
+  focusScore: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7CB342',
+  },
+  focusAction: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    padding: 10,
+    gap: 8,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7CB342',
+  },
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    alignItems: 'center',
+  },
+  webChartNote: {
+    fontSize: 13,
+    color: '#999',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  areaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
+  },
+  areaRowName: {
+    fontSize: 13,
+    color: '#4A4A4A',
+    width: 120,
+  },
+  areaRowBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginHorizontal: 8,
+  },
+  areaRowFill: {
+    height: '100%',
+    backgroundColor: '#7CB342',
+  },
+  areaRowScore: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7CB342',
+    width: 30,
+    textAlign: 'right',
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    backgroundColor: '#7CB342',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    shadowColor: '#7CB342',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  ctaButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  soundCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F1F8E9',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 24,
+    borderWidth: 1.5,
+    borderColor: '#AED581',
+  },
+  soundCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+  },
+  soundIconBg: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soundCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    marginBottom: 3,
+  },
+  soundCardSub: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+  },
+});
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated } from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppContext } from '../../src/contexts/AppContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: any }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F5DC', padding: 24, justifyContent: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#EF5350', marginBottom: 16 }}>
+            Errore Screening
+          </Text>
+          <Text style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
+            {this.state.error?.toString() || 'Unknown error'}
+          </Text>
+          <Text style={{ fontSize: 12, color: '#999', marginTop: 16 }}>
+            Build: SCREENING-21-FIX-001
+          </Text>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Question structure
+interface Question {
+  id: string;
+  area: string;
+  text: string;
+  scaleType: 'frequency' | 'quality' | 'intensity';
+  polarity: 'positive' | 'negative';
+  weight: number;
+}
+
+// FIXED 21 QUESTIONS (3 per area × 7 areas)
+const QUESTIONS: Question[] = [
+  // ENERGIA (3)
+  { id: 'energia_1', area: 'energia', text: 'Come valuti il tuo livello di energia durante il giorno?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  { id: 'energia_2', area: 'energia', text: 'Quanto spesso ti senti stanco/a senza un motivo chiaro?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
+  { id: 'energia_3', area: 'energia', text: 'Nel pomeriggio, quanto ti è facile mantenere concentrazione e lucidità?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  
+  // SONNO (3)
+  { id: 'sonno_1', area: 'sonno', text: 'Come valuti la qualità complessiva del tuo sonno nell\'ultima settimana?', scaleType: 'quality', polarity: 'positive', weight: 1.2 },
+  { id: 'sonno_2', area: 'sonno', text: 'Quanto spesso ti svegli durante la notte?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
+  { id: 'sonno_3', area: 'sonno', text: 'Quanto ti senti riposato/a al risveglio?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  
+  // STRESS (3)
+  { id: 'stress_1', area: 'stress', text: 'Negli ultimi 7 giorni, quanto ti sei sentito/a sotto pressione o in tensione?', scaleType: 'intensity', polarity: 'negative', weight: 1.2 },
+  { id: 'stress_2', area: 'stress', text: 'Quanto spesso ti capita di rimuginare o di non riuscire a "staccare" mentalmente?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
+  { id: 'stress_3', area: 'stress', text: 'Quanto ti senti in grado di recuperare calma durante la giornata?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  
+  // MOVIMENTO (3)
+  { id: 'movimento_1', area: 'movimento', text: 'Negli ultimi 7 giorni, quanto ti sei mosso/a (camminate, sport, attività)?', scaleType: 'frequency', polarity: 'positive', weight: 1 },
+  { id: 'movimento_2', area: 'movimento', text: 'Quanto spesso senti rigidità o dolori muscolari/articolari che limitano i movimenti?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
+  { id: 'movimento_3', area: 'movimento', text: 'Come valuti la tua sensazione di corpo "sciolto e reattivo" durante la giornata?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  
+  // ALIMENTAZIONE (3)
+  { id: 'alimentazione_1', area: 'alimentazione', text: 'Come valuti l\'equilibrio della tua alimentazione nell\'ultima settimana?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  { id: 'alimentazione_2', area: 'alimentazione', text: 'Quanto spesso mangi in modo affrettato o distratto, senza ascoltare fame e sazietà?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
+  { id: 'alimentazione_3', area: 'alimentazione', text: 'Quanto ti senti stabile come energia dopo i pasti (senza cali forti)?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  
+  // PELLE (3)
+  { id: 'pelle_1', area: 'pelle', text: 'Come valuti lo stato generale della tua pelle in questo periodo?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  { id: 'pelle_2', area: 'pelle', text: 'Quanto spesso noti sensibilità, rossori o imperfezioni che ti danno fastidio?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
+  { id: 'pelle_3', area: 'pelle', text: 'Quanto ti senti soddisfatto/a di idratazione e comfort della pelle (senza "tirare")?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  
+  // EQUILIBRIO MENTALE (3)
+  { id: 'equilibrio_mentale_1', area: 'equilibrio_mentale', text: 'Quanto ti senti emotivamente centrato/a negli ultimi 7 giorni?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  { id: 'equilibrio_mentale_2', area: 'equilibrio_mentale', text: 'Quanto spesso ti senti sopraffatto/a da pensieri o emozioni difficili da gestire?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
+  { id: 'equilibrio_mentale_3', area: 'equilibrio_mentale', text: 'Quanto valuti la tua capacità di ritagliarti pochi minuti per ricaricarti (pausa, respiro, silenzio)?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+];
+
+// Scale labels with defensive fallback
+const SCALE_LABELS: { [key: string]: string[] } = {
+  frequency: ['Mai', 'Raramente', 'A volte', 'Spesso', 'Sempre'],
+  quality: ['Molto scarsa', 'Scarsa', 'Discreta', 'Buona', 'Ottima'],
+  intensity: ['Per niente', 'Poco', 'Moderata', 'Alta', 'Molto alta'],
+};
+
+// Defensive getter for scale labels
+const getScaleLabels = (scaleType: string): string[] => {
+  return SCALE_LABELS[scaleType] || SCALE_LABELS.frequency;
+};
+
+// Area display info
+const AREA_INFO: { [key: string]: { name: string; icon: string; color: string } } = {
+  energia: { name: 'Energia', icon: 'flash', color: '#FF9800' },
+  sonno: { name: 'Sonno', icon: 'moon', color: '#9C27B0' },
+  stress: { name: 'Stress', icon: 'alert-circle', color: '#F44336' },
+  movimento: { name: 'Movimento', icon: 'walk', color: '#2196F3' },
+  alimentazione: { name: 'Alimentazione', icon: 'restaurant', color: '#4CAF50' },
+  pelle: { name: 'Pelle', icon: 'water', color: '#00BCD4' },
+  equilibrio_mentale: { name: 'Equilibrio Mentale', icon: 'heart', color: '#E91E63' },
+};
+
+function QuestionnaireScreen() {
+  const router = useRouter();
+  const { user, isGuest, setScreeningResult } = useAppContext();
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<number[]>(Array(21).fill(0));
+  const [currentAnswer, setCurrentAnswer] = useState(3);
+  const [fadeAnim] = useState(new Animated.Value(1));
+  const [loading, setLoading] = useState(false);
+
+  const totalQuestions = 21;
+  const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+  const timeRemaining = Math.ceil((totalQuestions - currentQuestionIndex - 1) * 0.3);
+
+  // Defensive: ensure question exists
+  const currentQuestion = QUESTIONS[currentQuestionIndex];
+  if (!currentQuestion) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={{ color: '#EF5350', textAlign: 'center', padding: 24 }}>
+          Question missing. Please restart.
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  const areaInfo = AREA_INFO[currentQuestion.area] || { name: 'Area', icon: 'help', color: '#999' };
+  const scaleLabels = getScaleLabels(currentQuestion.scaleType);
+  const polarity = currentQuestion.polarity || 'positive'; // Defensive default
+
+  useEffect(() => {
+    loadSavedProgress();
+  }, []);
+
+  useEffect(() => {
+    if (answers[currentQuestionIndex] > 0) {
+      setCurrentAnswer(answers[currentQuestionIndex]);
+    } else {
+      setCurrentAnswer(3);
+    }
+    
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [currentQuestionIndex]);
+
+  const loadSavedProgress = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('screening_v2_progress');
+      if (saved) {
+        const { questionIndex, savedAnswers } = JSON.parse(saved);
+        setCurrentQuestionIndex(questionIndex);
+        setAnswers(savedAnswers);
+      }
+    } catch (error) {
+      console.error('Error loading progress:', error);
+    }
+  };
+
+  const saveProgress = async (index: number, updatedAnswers: number[]) => {
+    try {
+      await AsyncStorage.setItem('screening_v2_progress', JSON.stringify({
+        questionIndex: index,
+        savedAnswers: updatedAnswers,
+      }));
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
+  };
+
+  const handleAnswerChange = (value: number) => {
+    setCurrentAnswer(value);
+  };
+
+  const getSmartHint = (value: number, polarity: string): string => {
+    if (polarity === 'negative') {
+      if (value >= 4) return '💡 Qui potresti migliorare: inizia con piccole azioni quotidiane';
+      return '✓ Annotato.';
+    } else {
+      if (value >= 4) return '🌟 Ottimo: continua così!';
+      return '✓ Annotato.';
+    }
+  };
+
+  const handleNext = () => {
+    // Ensure current answer is saved before proceeding
+    const updatedAnswers = [...answers];
+    updatedAnswers[currentQuestionIndex] = currentAnswer;
+    setAnswers(updatedAnswers);
+
+    if (currentQuestionIndex < totalQuestions - 1) {
+      // Not last question, go to next
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(() => {
+        const nextIndex = currentQuestionIndex + 1;
+        setCurrentQuestionIndex(nextIndex);
+        saveProgress(nextIndex, updatedAnswers);
+        fadeAnim.setValue(1);
+      });
+    } else {
+      // Last question (Q21), submit
+      submitScreening(updatedAnswers);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentQuestionIndex > 0) {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(() => {
+        const prevIndex = currentQuestionIndex - 1;
+        setCurrentQuestionIndex(prevIndex);
+        saveProgress(prevIndex, answers);
+        fadeAnim.setValue(1);
+      });
+    }
+  };
+
+  const submitScreening = async (finalAnswers: number[]) => {
+    setLoading(true);
+    
+    // PART 1: REQUIRED DEBUG LOGGING
+    console.log('=== SUBMIT SCREENING V2 ===');
+    console.log({
+      currentIndex: currentQuestionIndex,
+      totalQuestions: QUESTIONS.length,
+      lastQuestionId: QUESTIONS[QUESTIONS.length - 1]?.id,
+      lastAnswer: finalAnswers[QUESTIONS.length - 1],
+      answersCount: finalAnswers.filter(a => a > 0).length,
+      allAnswers: finalAnswers,
+    });
+    
+    // Local computation for fallback
+    const debugReport: any = { questions: [], areas: {}, iobioIndex: 0 };
+    const areaScores: { [area: string]: { scores: number[], weights: number[] } } = {};
+    
+    try {
+      // Calculate scores locally
+      QUESTIONS.forEach((q, index) => {
+        const value = finalAnswers[index];
+        const polarity = q.polarity || 'positive';
+        const weight = q.weight || 1;
+        
+        let questionScore: number;
+        if (polarity === 'positive') {
+          questionScore = ((value - 1) / 4) * 100;
+        } else {
+          questionScore = ((5 - value) / 4) * 100;
+        }
+        
+        debugReport.questions.push({ id: q.id, value, polarity, questionScore: questionScore.toFixed(1) });
+        
+        if (!areaScores[q.area]) {
+          areaScores[q.area] = { scores: [], weights: [] };
+        }
+        areaScores[q.area].scores.push(questionScore * weight);
+        areaScores[q.area].weights.push(weight);
+      });
+      
+      // Calculate area averages
+      const areaAverages: { [area: string]: number } = {};
+      Object.keys(areaScores).forEach(area => {
+        const totalWeightedScore = areaScores[area].scores.reduce((a, b) => a + b, 0);
+        const totalWeight = areaScores[area].weights.reduce((a, b) => a + b, 0);
+        areaAverages[area] = totalWeightedScore / totalWeight;
+        debugReport.areas[area] = areaAverages[area].toFixed(1);
+      });
+      
+      // Calculate IOBIO index
+      const iobioIndex = Object.values(areaAverages).reduce((a, b) => a + b, 0) / Object.keys(areaAverages).length;
+      debugReport.iobioIndex = iobioIndex.toFixed(1);
+      
+      console.log('Questions:', debugReport.questions);
+      console.log('Area Scores:', debugReport.areas);
+      console.log('IOBIO Index:', debugReport.iobioIndex);
+      
+      // Find 3 weakest areas
+      const sortedAreas = Object.entries(areaAverages).sort((a, b) => a[1] - b[1]);
+      const weakAreas = sortedAreas.slice(0, 3).map(([area]) => area);
+      
+      // Create local results object
+      const localResults = {
+        id: `local_${Date.now()}`,
+        indice_iobio: Math.round(iobioIndex),
+        area_scores: Object.fromEntries(
+          Object.entries(areaAverages).map(([k, v]) => [k, Math.round(v)])
+        ),
+        weak_areas: weakAreas,
+        date: new Date().toISOString(),
+      };
+      
+      console.log('Local Results:', localResults);
+      
+      // Store locally first (safety)
+      await AsyncStorage.setItem('iobio_latest_results', JSON.stringify(localResults));
+      
+      // Try API submit
+      try {
+        const formattedAnswers = QUESTIONS.map((question, index) => ({
+          question_id: question.id,
+          area: question.area,
+          answer: finalAnswers[index],
+          scale_type: question.scaleType,
+          polarity: question.polarity || 'positive',
+          weight: question.weight || 1,
+        }));
+
+        const response = await fetch(`${API_URL}/api/screening/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: isGuest ? null : user?.id,
+            answers: formattedAnswers,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('API Response:', data);
+          // Use API data if available
+          setScreeningResult(data);
+          await AsyncStorage.setItem('iobio_latest_results', JSON.stringify(data));
+        } else {
+          console.warn('API returned error, using local results');
+          setScreeningResult(localResults);
+        }
+      } catch (apiError) {
+        console.error('API submit failed:', apiError);
+        // Use local results
+        setScreeningResult(localResults);
+        alert('Errore salvataggio: continuo in locale');
+      }
+      
+      // CRITICAL: Always navigate, even if API fails
+      await AsyncStorage.removeItem('screening_v2_progress');
+      router.replace('/screening/results');
+      
+    } catch (error) {
+      console.error('Critical error in submit:', error);
+      alert('Errore durante il calcolo. Riprova.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.progressInfo}>
+          <Text style={styles.progressText}>Domanda {currentQuestionIndex + 1}/21</Text>
+          <Text style={styles.timeText}>~{timeRemaining} min</Text>
+        </View>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${progress}%` }]} />
+        </View>
+      </View>
+
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        <View style={[styles.areaHeader, { backgroundColor: areaInfo.color + '20' }]}>
+          <Ionicons name={areaInfo.icon as any} size={32} color={areaInfo.color} />
+          <Text style={[styles.areaName, { color: areaInfo.color }]}>{areaInfo.name}</Text>
+        </View>
+
+        <View style={styles.questionCard}>
+          <Text style={styles.questionText}>{currentQuestion.text}</Text>
+        </View>
+
+        <View style={styles.answerSection}>
+          <View style={styles.buttonSelector}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <Pressable
+                key={value}
+                style={[
+                  styles.valueButton,
+                  currentAnswer === value && [styles.valueButtonSelected, { backgroundColor: areaInfo.color }],
+                ]}
+                onPress={() => handleAnswerChange(value)}
+              >
+                <Text style={[
+                  styles.valueButtonText,
+                  currentAnswer === value && styles.valueButtonTextSelected
+                ]}>
+                  {value}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.labelsContainer}>
+            {scaleLabels.map((label, index) => (
+              <Text key={index} style={[
+                styles.label,
+                currentAnswer === index + 1 && styles.labelActive
+              ]}>
+                {label}
+              </Text>
+            ))}
+          </View>
+
+          <View style={styles.hintContainer}>
+            <Text style={styles.hintText}>{getSmartHint(currentAnswer, polarity)}</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      <View style={styles.buttonContainer}>
+        {currentQuestionIndex > 0 && (
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Ionicons name="arrow-back" size={20} color="#7CB342" />
+            <Text style={styles.backButtonText}>Indietro</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.nextButton, { flex: currentQuestionIndex === 0 ? 1 : undefined }]}
+          onPress={handleNext}
+          disabled={loading}
+        >
+          <Text style={styles.nextButtonText}>
+            {loading ? 'Caricamento...' : currentQuestionIndex === 20 ? 'Completa' : 'Avanti'}
+          </Text>
+          {currentQuestionIndex < 20 && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.buildLabel}>Build: SCREENING-21-FIX-001</Text>
+    </SafeAreaView>
+  );
+}
+
+// Wrap with ErrorBoundary
+export default function WrappedQuestionnaireScreen() {
+  return (
+    <ErrorBoundary>
+      <QuestionnaireScreen />
+    </ErrorBoundary>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F5F5DC' },
+  header: { padding: 20, paddingTop: 8 },
+  progressInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  progressText: { fontSize: 16, fontWeight: '600', color: '#4A4A4A' },
+  timeText: { fontSize: 14, color: '#999' },
+  progressBarContainer: { height: 6, backgroundColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden' },
+  progressBar: { height: '100%', backgroundColor: '#7CB342', borderRadius: 3 },
+  content: { flex: 1, padding: 24, justifyContent: 'center' },
+  areaHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 24, gap: 12 },
+  areaName: { fontSize: 18, fontWeight: '600' },
+  questionCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
+  questionText: { fontSize: 18, fontWeight: '500', color: '#4A4A4A', lineHeight: 26 },
+  answerSection: { marginBottom: 32 },
+  buttonSelector: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, gap: 8 },
+  valueButton: { flex: 1, aspectRatio: 1, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 2, borderColor: '#E0E0E0', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  valueButtonSelected: { borderColor: '#7CB342', borderWidth: 3 },
+  valueButtonText: { fontSize: 24, fontWeight: '600', color: '#666' },
+  valueButtonTextSelected: { color: '#FFFFFF' },
+  labelsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  label: { fontSize: 10, color: '#999', flex: 1, textAlign: 'center' },
+  labelActive: { color: '#7CB342', fontWeight: '600' },
+  hintContainer: { backgroundColor: '#E8F5E9', borderRadius: 12, padding: 16 },
+  hintText: { fontSize: 14, color: '#4A4A4A', lineHeight: 20, textAlign: 'center' },
+  buttonContainer: { flexDirection: 'row', padding: 20, gap: 12 },
+  backButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#7CB342', gap: 8 },
+  backButtonText: { color: '#7CB342', fontSize: 16, fontWeight: '600' },
+  nextButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#7CB342', borderRadius: 12, padding: 16, gap: 8 },
+  nextButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  buildLabel: { fontSize: 10, color: '#7CB342', textAlign: 'center', paddingBottom: 8, fontWeight: '600' },
+});
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export default function WelcomeScreen() {
+  const router = useRouter();
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="leaf-outline" size={80} color="#7CB342" />
+          </View>
+          
+          <Text style={styles.title}>IOBIO Compass</Text>
+          <Text style={styles.subtitle}>Benessere Olistico</Text>
+          
+          <View style={styles.card}>
+            <Text style={styles.disclaimerTitle}>Benvenuto!</Text>
+            <Text style={styles.disclaimer}>
+              IOBIO Compass è uno strumento di screening per il benessere olistico.
+            </Text>
+            <Text style={styles.disclaimer}>
+              Questo strumento non sostituisce diagnosi o pareri medici professionali.
+            </Text>
+            <Text style={styles.disclaimer}>
+              Per qualsiasi dubbio sulla tua salute, consulta sempre un medico qualificato.
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.button}
+            onPress={() => router.push('/onboarding/auth')}
+          >
+            <Text style={styles.buttonText}>Inizia</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 20,
+    color: '#7CB342',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  disclaimerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  disclaimer: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#7CB342',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppContext } from '../../src/contexts/AppContext';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+export default function AuthScreen() {
+  const router = useRouter();
+  const { setUser, setIsGuest } = useAppContext();
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAuth = async () => {
+    if (!email || !password) {
+      Alert.alert('Errore', 'Inserisci email e password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const endpoint = isLogin ? '/api/login' : '/api/register';
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Errore', data.detail || 'Errore durante l\'autenticazione');
+        return;
+      }
+
+      setUser(data);
+      setIsGuest(false);
+      router.push('/onboarding/privacy');
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile connettersi al server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuest = () => {
+    setIsGuest(true);
+    setUser(null);
+    router.push('/onboarding/privacy');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
+            <Text style={styles.title}>{isLogin ? 'Accedi' : 'Registrati'}</Text>
+            
+            <View style={styles.form}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="tuaemail@esempio.it"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Inserisci la password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoComplete="password"
+                />
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleAuth}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Caricamento...' : (isLogin ? 'Accedi' : 'Registrati')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
+                <Text style={styles.switchText}>
+                  {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>oppure</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity 
+              style={styles.guestButton}
+              onPress={handleGuest}
+            >
+              <Text style={styles.guestButtonText}>Continua come Guest</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  form: {
+    marginBottom: 24,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    color: '#4A4A4A',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  input: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  button: {
+    backgroundColor: '#7CB342',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  switchText: {
+    color: '#7CB342',
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 14,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#999',
+    fontSize: 14,
+  },
+  guestButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#7CB342',
+  },
+  guestButtonText: {
+    color: '#7CB342',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface User {
+  id: string;
+  email: string;
+  age_range?: string;
+  gender?: string;
+}
+
+interface UserProfile {
+  age_range: string;
+  gender: string;
+}
+
+interface ScreeningResult {
+  id: string;
+  indice_iobio: number;
+  area_scores: { [key: string]: number };
+  weak_areas: string[];
+  date: string;
+}
+
+interface AppContextType {
+  user: User | null;
+  isGuest: boolean;
+  hasCompletedOnboarding: boolean;
+  screeningResult: ScreeningResult | null;
+  isBootstrapped: boolean;
+  userProfile: UserProfile | null;
+  setUser: (user: User | null) => void;
+  setIsGuest: (isGuest: boolean) => void;
+  setHasCompletedOnboarding: (completed: boolean) => void;
+  setScreeningResult: (result: ScreeningResult | null) => void;
+  setUserProfile: (profile: UserProfile | null) => void;
+  logout: () => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isGuest, setIsGuest] = useState<boolean>(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(false);
+  const [screeningResult, setScreeningResult] = useState<ScreeningResult | null>(null);
+  const [isBootstrapped, setIsBootstrapped] = useState<boolean>(false);
+  const [userProfile, setUserProfileState] = useState<UserProfile | null>(null);
+
+  // Load saved data on mount
+  useEffect(() => {
+    loadSavedData();
+  }, []);
+
+  const loadSavedData = async () => {
+    try {
+      const savedUser = await AsyncStorage.getItem('user');
+      const savedIsGuest = await AsyncStorage.getItem('isGuest');
+      const savedOnboarding = await AsyncStorage.getItem('hasCompletedOnboarding');
+      const savedScreening = await AsyncStorage.getItem('screeningResult');
+      const savedProfile = await AsyncStorage.getItem('iobio_user_profile');
+
+      if (savedUser) setUser(JSON.parse(savedUser));
+      if (savedIsGuest) setIsGuest(JSON.parse(savedIsGuest));
+      if (savedOnboarding) setHasCompletedOnboarding(JSON.parse(savedOnboarding));
+      if (savedScreening) setScreeningResult(JSON.parse(savedScreening));
+      if (savedProfile) setUserProfileState(JSON.parse(savedProfile));
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+    } finally {
+      // Always set bootstrapped to true after attempting to load
+      setIsBootstrapped(true);
+    }
+  };
+
+  const saveUser = async (newUser: User | null) => {
+    setUser(newUser);
+    if (newUser) {
+      await AsyncStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      await AsyncStorage.removeItem('user');
+    }
+  };
+
+  const saveIsGuest = async (guest: boolean) => {
+    setIsGuest(guest);
+    await AsyncStorage.setItem('isGuest', JSON.stringify(guest));
+  };
+
+  const saveHasCompletedOnboarding = async (completed: boolean) => {
+    setHasCompletedOnboarding(completed);
+    await AsyncStorage.setItem('hasCompletedOnboarding', JSON.stringify(completed));
+  };
+
+  const saveScreeningResult = async (result: ScreeningResult | null) => {
+    setScreeningResult(result);
+    if (result) {
+      await AsyncStorage.setItem('screeningResult', JSON.stringify(result));
+    } else {
+      await AsyncStorage.removeItem('screeningResult');
+    }
+  };
+
+  const setUserProfile = async (profile: UserProfile | null) => {
+    setUserProfileState(profile);
+    if (profile) {
+      await AsyncStorage.setItem('iobio_user_profile', JSON.stringify(profile));
+    } else {
+      await AsyncStorage.removeItem('iobio_user_profile');
+    }
+  };
+
+  const logout = async () => {
+    await AsyncStorage.clear();
+    setUser(null);
+    setIsGuest(false);
+    setHasCompletedOnboarding(false);
+    setScreeningResult(null);
+    setUserProfileState(null);
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        user,
+        isGuest,
+        hasCompletedOnboarding,
+        screeningResult,
+        isBootstrapped,
+        userProfile,
+        setUser: saveUser,
+        setIsGuest: saveIsGuest,
+        setHasCompletedOnboarding: saveHasCompletedOnboarding,
+        setScreeningResult: saveScreeningResult,
+        setUserProfile,
+        logout,
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within AppProvider');
+  }
+  return context;
+};
