@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timedelta
 import bcrypt
 import random
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from anthropic import AsyncAnthropic
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,8 +21,10 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Get Emergent LLM Key
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+# Claude (chiamata diretta, sostituisce emergentintegrations)
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
+anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -122,7 +124,7 @@ def verify_password(password: str, hashed: str) -> bool:
 def calculate_indice_iobio(answers: List[ScreeningAnswer]) -> tuple[int, Dict[str, int], List[str]]:
     """
     Calculate Indice IOBIO (0-100) with polarity and weight support.
-    
+
     Scoring logic:
     - Positive polarity: score = (answer - 1) / 4 * 100 (1-5 → 0-100)
     - Negative polarity: inverted score = (5 - answer) / 4 * 100
@@ -130,13 +132,13 @@ def calculate_indice_iobio(answers: List[ScreeningAnswer]) -> tuple[int, Dict[st
     """
     area_scores = {}
     area_weights = {}
-    
+
     for answer in answers:
         area = answer.area
         raw_value = answer.answer  # 1-5
         weight = answer.weight
         polarity = answer.polarity
-        
+
         # Calculate normalized score (0-100)
         if polarity == 'positive':
             # Higher answer = better score
@@ -144,44 +146,44 @@ def calculate_indice_iobio(answers: List[ScreeningAnswer]) -> tuple[int, Dict[st
         else:  # negative polarity
             # Higher answer = worse score, so invert
             normalized_score = (5 - raw_value) / 4 * 100
-        
+
         # Apply weight
         weighted_score = normalized_score * weight
-        
+
         # Accumulate by area
         if area not in area_scores:
             area_scores[area] = []
             area_weights[area] = []
-        
+
         area_scores[area].append(weighted_score)
         area_weights[area].append(weight)
-    
+
     # Calculate weighted average for each area
     area_averages = {}
     for area in area_scores:
         total_weighted_score = sum(area_scores[area])
         total_weight = sum(area_weights[area])
         area_averages[area] = int(total_weighted_score / total_weight)
-    
+
     # Calculate overall Indice IOBIO (weighted average of all areas)
     indice_iobio = int(sum(area_averages.values()) / len(area_averages))
-    
+
     # Find 3 weakest areas
     sorted_areas = sorted(area_averages.items(), key=lambda x: x[1])
     weak_areas = [area for area, _ in sorted_areas[:3]]
-    
+
     return indice_iobio, area_averages, weak_areas
 
 async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = None) -> List[PianoTask]:
     """Generate 30 days of micro-habits based on weak areas with robust fallback"""
-    
+
     # GUARDRAIL A: Ensure weak_areas is never empty
     if not weak_areas or len(weak_areas) == 0:
         weak_areas = ["stress", "sonno", "energia"]  # Default fallback
         print("TASK_FALLBACK_USED", {"reason": "weak_areas_empty", "fallback": weak_areas})
-    
+
     tasks_per_area = 10  # 30 days / 3 areas = 10 tasks per area
-    
+
     task_templates = {
         "energia": [
             "Fai 5 minuti di stretching al risveglio",
@@ -268,7 +270,7 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Pratica il perdono verso te stesso"
         ]
     }
-    
+
     # GUARDRAIL B: Build task_list and ensure it's never empty
     task_list = []
     matched_areas = []
@@ -281,9 +283,9 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             print(f"PIANO_AREA_MATCHED: {area} -> {area_lower} ({len(task_templates[area_lower])} tasks)")
         else:
             print(f"PIANO_AREA_NOT_FOUND: {area} (normalized: {area_lower})")
-    
+
     print(f"PIANO_TASK_LIST_SIZE: {len(task_list)} tasks from {len(matched_areas)} areas")
-    
+
     # If task_list is still empty, use generic fallback
     if not task_list:
         task_list = [
@@ -299,7 +301,7 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Vai a letto alla stessa ora stasera."
         ]
         print("TASK_FALLBACK_USED", {"weak_areas": weak_areas, "reason": "empty_task_list"})
-    
+
     # GUARDRAIL C: Generate exactly 30 tasks
     tasks = []
     for day_num in range(1, 31):  # Days 1-30
@@ -307,7 +309,7 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
         task_text = task_list[(day_num - 1) % len(task_list)]
         # Rotate through weak_areas for area assignment
         area = weak_areas[(day_num - 1) % len(weak_areas)]
-        
+
         task = PianoTask(
             user_id=user_id,
             day=day_num,
@@ -315,7 +317,7 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             area=area
         )
         tasks.append(task)
-    
+
     return tasks
 
 # ===== ROUTES =====
@@ -326,14 +328,14 @@ async def register(user_data: UserRegister):
     existing = await db.users.find_one({"email": user_data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Email già registrata")
-    
+
     # Create user
     user = User(
         email=user_data.email,
         password_hash=hash_password(user_data.password)
     )
     await db.users.insert_one(user.dict())
-    
+
     return UserResponse(id=user.id, email=user.email)
 
 @api_router.post("/login", response_model=UserResponse)
@@ -341,17 +343,17 @@ async def login(user_data: UserLogin):
     user_dict = await db.users.find_one({"email": user_data.email})
     if not user_dict:
         raise HTTPException(status_code=401, detail="Credenziali non valide")
-    
+
     if not verify_password(user_data.password, user_dict["password_hash"]):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
-    
+
     return UserResponse(id=user_dict["id"], email=user_dict["email"])
 
 @api_router.post("/screening/submit", response_model=ScreeningResult)
 async def submit_screening(data: ScreeningSubmit):
     # Calculate scores
     indice_iobio, area_scores, weak_areas = calculate_indice_iobio(data.answers)
-    
+
     # Create screening result
     result = ScreeningResult(
         user_id=data.user_id,
@@ -360,21 +362,21 @@ async def submit_screening(data: ScreeningSubmit):
         area_scores=area_scores,
         weak_areas=weak_areas
     )
-    
+
     # Save to database
     await db.screenings.insert_one(result.dict())
-    
+
     # Delete existing piano tasks for this user before generating new ones
     query = {"user_id": data.user_id} if data.user_id else {"user_id": None}
     delete_result = await db.piano_tasks.delete_many(query)
     print(f"PIANO_TASKS_DELETED: {delete_result.deleted_count} tasks removed for user_id={data.user_id}")
-    
+
     # Generate piano tasks
     tasks = await generate_piano_tasks(weak_areas, data.user_id)
     for task in tasks:
         await db.piano_tasks.insert_one(task.dict())
     print(f"PIANO_TASKS_CREATED: {len(tasks)} new tasks for user_id={data.user_id}")
-    
+
     return result
 
 @api_router.get("/screening/latest")
@@ -404,7 +406,7 @@ async def get_checkin_history(user_id: Optional[str] = None, days: int = 30):
     query = {"user_id": user_id} if user_id else {"user_id": None}
     start_date = datetime.utcnow() - timedelta(days=days)
     query["date"] = {"$gte": start_date}
-    
+
     checkins = await db.checkins.find(query).sort("date", -1).to_list(100)
     # Convert ObjectId to string for each checkin
     for checkin in checkins:
@@ -442,17 +444,17 @@ async def chat_with_ai(data: ChatRequest):
                 {"user_id": data.user_id},
                 sort=[("date", -1)]
             )
-        
+
         # Build context
         context = "Sei un coach di benessere olistico. Fornisci consigli semplici e pratici per migliorare il benessere. "
         context += "Non fornire mai diagnosi mediche. "
         context += "Se l'utente menziona sintomi gravi come depressione severa, pensieri autolesionistici, attacchi di panico, o altri sintomi seri, "
         context += "rispondi con empatia e raccomanda di consultare un professionista della salute mentale. "
-        
+
         if screening:
             context += f"\nContesto utente: Indice IOBIO {screening['indice_iobio']}/100. "
             context += f"Aree più deboli: {', '.join(screening['weak_areas'])}. "
-        
+
         # Check for safety keywords in user message
         safety_keywords = ['suicid', 'uccid', 'morte', 'morire', 'autolesion', 'depress grave', 'panico', 'ansia grave']
         if any(keyword in data.message.lower() for keyword in safety_keywords):
@@ -464,18 +466,22 @@ async def chat_with_ai(data: ChatRequest):
                 "La tua salute e il tuo benessere sono la priorità. 💚"
             )
             return ChatResponse(response=safety_response)
-        
+
         try:
-            # Use Emergent LLM for chat
-            chat = LlmChat(
-                api_key=EMERGENT_LLM_KEY,
-                session_id=data.user_id or "guest",
-                system_message=context
-            ).with_model("openai", "gpt-5.2")
-            
-            user_message = UserMessage(text=data.message)
-            response = await chat.send_message(user_message)
-            
+            # Chiamata diretta a Claude (nessun proxy Emergent)
+            if anthropic_client is None:
+                raise RuntimeError("ANTHROPIC_API_KEY non configurata")
+
+            completion = await anthropic_client.messages.create(
+                model=ANTHROPIC_MODEL,
+                max_tokens=1024,
+                system=context,
+                messages=[
+                    {"role": "user", "content": data.message},
+                ],
+            )
+            response = completion.content[0].text
+
             # Save chat history
             await db.chat_history.insert_one({
                 "user_id": data.user_id,
@@ -483,24 +489,24 @@ async def chat_with_ai(data: ChatRequest):
                 "response": response,
                 "timestamp": datetime.utcnow()
             })
-            
+
             return ChatResponse(response=response)
-        
+
         except Exception as llm_error:
             # If LLM fails (budget exceeded, etc.), provide fallback response
             logging.error(f"LLM error: {str(llm_error)}")
-            
+
             fallback_responses = [
                 "Grazie per la tua domanda! Per migliorare il tuo benessere, ricorda di: fare movimento regolare, dormire bene, bere molta acqua e praticare la mindfulness. 🌿",
                 "Il benessere è un viaggio! Inizia con piccoli passi: una camminata di 10 minuti, qualche respiro profondo, o semplicemente prenderti un momento per te. 💚",
                 "Ricorda i pilastri del benessere: alimentazione sana, movimento, riposo adeguato, gestione dello stress e connessioni sociali positive. Su quale vuoi lavorare oggi? 🌱"
             ]
-            
+
             import random
             fallback = random.choice(fallback_responses)
-            
+
             return ChatResponse(response=fallback)
-    
+
     except Exception as e:
         logging.error(f"Chat error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Errore durante la chat: {str(e)}")
