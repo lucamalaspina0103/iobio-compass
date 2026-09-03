@@ -349,7 +349,11 @@ function QuestionnaireScreen() {
         console.error('API submit failed:', apiError);
         // Use local results
         setScreeningResult(localResults);
-        alert('Errore salvataggio: continuo in locale');
+        try {
+          alert('Errore salvataggio: continuo in locale');
+        } catch (alertError) {
+          console.warn('Alert non mostrabile, continuo comunque:', alertError);
+        }
       }
       
       // CRITICAL: Always navigate, even if API fails
