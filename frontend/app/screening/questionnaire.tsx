@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -93,7 +93,7 @@ const QUESTIONS: Question[] = [
 // Scale labels with defensive fallback
 const SCALE_LABELS: { [key: string]: string[] } = {
   frequency: ['Mai', 'Raramente', 'A volte', 'Spesso', 'Sempre'],
-  quality: ['Molto scarsa', 'Scarsa', 'Discreta', 'Buona', 'Ottima'],
+  quality: ['Insufficiente', 'Scarsa', 'Discreta', 'Buona', 'Eccellente'],
   intensity: ['Per niente', 'Poco', 'Moderata', 'Alta', 'Molto alta'],
 };
 
@@ -430,12 +430,12 @@ function QuestionnaireScreen() {
 
       <View style={styles.buttonContainer}>
         {currentQuestionIndex > 0 && (
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Pressable style={styles.backButton} onPress={handleBack}>
             <Ionicons name="arrow-back" size={20} color="#7CB342" />
             <Text style={styles.backButtonText}>Indietro</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
-        <TouchableOpacity
+        <Pressable
           style={[styles.nextButton, { flex: currentQuestionIndex === 0 ? 1 : undefined }]}
           onPress={handleNext}
           disabled={loading}
@@ -444,7 +444,7 @@ function QuestionnaireScreen() {
             {loading ? 'Caricamento...' : currentQuestionIndex === 20 ? 'Completa' : 'Avanti'}
           </Text>
           {currentQuestionIndex < 20 && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <Text style={styles.buildLabel}>Build: SCREENING-21-FIX-001</Text>
