@@ -10,6 +10,7 @@ export default function ProfiloScreen() {
   const router = useRouter();
   const { user, isGuest, screeningResult, logout } = useAppContext();
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showRetakeModal, setShowRetakeModal] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -30,17 +31,12 @@ export default function ProfiloScreen() {
   };
 
   const handleRetakeScreening = () => {
-    Alert.alert(
-      'Rifai lo screening',
-      'Vuoi rifare lo screening per aggiornare il tuo profilo?',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Continua',
-          onPress: () => router.push('/screening/profile'),
-        },
-      ]
-    );
+    setShowRetakeModal(true);
+  };
+
+  const confirmRetakeScreening = () => {
+    setShowRetakeModal(false);
+    router.push('/screening/profile');
   };
 
   const handleResetApp = async () => {
@@ -210,6 +206,39 @@ export default function ProfiloScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showRetakeModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowRetakeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="clipboard" size={48} color="#7CB342" />
+            </View>
+            <Text style={styles.modalTitle}>Rifai lo screening</Text>
+            <Text style={styles.modalText}>
+              Vuoi rifare lo screening per aggiornare il tuo profilo?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButtonCancel}
+                onPress={() => setShowRetakeModal(false)}
+              >
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButtonConfirm}
+                onPress={confirmRetakeScreening}
+              >
+                <Text style={styles.modalButtonConfirmText}>Continua</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showResetModal}
