@@ -77,7 +77,7 @@ const QUESTIONS: Question[] = [
   // ALIMENTAZIONE (3)
   { id: 'alimentazione_1', area: 'alimentazione', text: 'Come valuti l\'equilibrio della tua alimentazione nell\'ultima settimana?', scaleType: 'quality', polarity: 'positive', weight: 1 },
   { id: 'alimentazione_2', area: 'alimentazione', text: 'Quanto spesso mangi in modo affrettato o distratto, senza ascoltare fame e sazietà?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
-  { id: 'alimentazione_3', area: 'alimentazione', text: 'Quanto ti senti stabile come energia dopo i pasti (senza cali forti)?', scaleType: 'quality', polarity: 'positive', weight: 1 },
+  { id: 'alimentazione_3', area: 'alimentazione', text: 'Quanto ti senti stabile come energia dopo i pasti (senza cali forti)?', scaleType: 'frequency', polarity: 'positive', weight: 1 },
   
   // PELLE (3)
   { id: 'pelle_1', area: 'pelle', text: 'Come valuti lo stato generale della tua pelle in questo periodo?', scaleType: 'quality', polarity: 'positive', weight: 1 },
