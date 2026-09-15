@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -95,15 +95,15 @@ export default function ProfiloScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Benessere</Text>
             
-            <TouchableOpacity style={styles.menuItem} onPress={handleRetakeScreening}>
+            <Pressable style={styles.menuItem} onPress={handleRetakeScreening}>
               <View style={styles.menuIconContainer}>
                 <Ionicons name="clipboard" size={24} color="#7CB342" />
               </View>
               <Text style={styles.menuText}>Rifai lo screening</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity 
+            <Pressable 
               style={styles.menuItem}
               onPress={() => {
                 console.log('PROFILE_TAP_PIANO_30');
@@ -115,9 +115,9 @@ export default function ProfiloScreen() {
               </View>
               <Text style={styles.menuText}>Piano 30 giorni</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity 
+            <Pressable 
               style={styles.menuItem}
               onPress={() => router.push('/(tabs)/mappa')}
             >
@@ -126,13 +126,13 @@ export default function ProfiloScreen() {
               </View>
               <Text style={styles.menuText}>Progressi</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Impostazioni</Text>
             
-            <TouchableOpacity 
+            <Pressable 
               style={styles.menuItem}
               onPress={() => router.push('/settings/notifications')}
             >
@@ -141,9 +141,9 @@ export default function ProfiloScreen() {
               </View>
               <Text style={styles.menuText}>Notifiche</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity 
+            <Pressable 
               style={styles.menuItem}
               onPress={() => router.push('/settings/privacy')}
             >
@@ -152,9 +152,9 @@ export default function ProfiloScreen() {
               </View>
               <Text style={styles.menuText}>Privacy</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity 
+            <Pressable 
               style={styles.menuItem}
               onPress={() => router.push('/support')}
             >
@@ -163,7 +163,7 @@ export default function ProfiloScreen() {
               </View>
               <Text style={styles.menuText}>Aiuto e supporto</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.section}>
@@ -185,18 +185,18 @@ export default function ProfiloScreen() {
             </View>
           </View>
 
-          <TouchableOpacity 
+          <Pressable 
             style={styles.resetButton} 
             onPress={() => setShowResetModal(true)}
           >
             <Ionicons name="refresh-circle" size={24} color="#FF9800" />
             <Text style={styles.resetText}>Reset app (riparti da zero)</Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Pressable style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out" size={24} color="#EF5350" />
             <Text style={styles.logoutText}>Esci</Text>
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.footer}>
             <Ionicons name="leaf" size={24} color="#7CB342" />
@@ -223,18 +223,18 @@ export default function ProfiloScreen() {
               Vuoi rifare lo screening per aggiornare il tuo profilo?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.modalButtonCancel}
                 onPress={() => setShowRetakeModal(false)}
               >
                 <Text style={styles.modalButtonCancelText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={styles.modalButtonConfirm}
                 onPress={confirmRetakeScreening}
               >
                 <Text style={styles.modalButtonConfirmText}>Continua</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -260,18 +260,18 @@ export default function ProfiloScreen() {
               • Dati guest salvati localmente
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+              <Pressable 
                 style={styles.modalButtonCancel}
                 onPress={() => setShowResetModal(false)}
               >
                 <Text style={styles.modalButtonCancelText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
+              </Pressable>
+              <Pressable 
                 style={styles.modalButtonConfirm}
                 onPress={handleResetApp}
               >
                 <Text style={styles.modalButtonConfirmText}>Reset App</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
