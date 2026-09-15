@@ -65,7 +65,7 @@ const QUESTIONS: Question[] = [
   { id: 'sonno_3', area: 'sonno', text: 'Quanto ti senti riposato/a al risveglio?', scaleType: 'quality', polarity: 'positive', weight: 1 },
   
   // STRESS (3)
-  { id: 'stress_1', area: 'stress', text: 'Negli ultimi 7 giorni, quanto ti sei sentito/a sotto pressione o in tensione?', scaleType: 'intensity', polarity: 'negative', weight: 1.2 },
+  { id: 'stress_1', area: 'stress', text: 'Negli ultimi 7 giorni, quanto ti sei sentito/a sotto pressione o in tensione?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
   { id: 'stress_2', area: 'stress', text: 'Quanto spesso ti capita di rimuginare o di non riuscire a "staccare" mentalmente?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
   { id: 'stress_3', area: 'stress', text: 'Quanto ti senti in grado di recuperare calma durante la giornata?', scaleType: 'quality', polarity: 'positive', weight: 1 },
   
