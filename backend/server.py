@@ -437,6 +437,25 @@ async def submit_screening(data: ScreeningSubmit):
 
     return result
 
+@api_router.delete("/reset")
+async def reset_user_data(user_id: Optional[str] = None):
+    """Cancella screening, piano tasks e check-in per un utente (o per il bucket
+    'guest' condiviso se user_id e' assente/vuoto). Utile per ripulire dati di
+    test/stale durante lo sviluppo - non e' esposto nell'app."""
+    query = {"user_id": user_id} if user_id else {"user_id": None}
+    screenings_deleted = await db.screenings.delete_many(query)
+    piano_deleted = await db.piano_tasks.delete_many(query)
+    checkins_deleted = await db.checkins.delete_many(query)
+    print(f"RESET_USER_DATA: user_id={user_id} screenings={screenings_deleted.deleted_count} "
+          f"piano_tasks={piano_deleted.deleted_count} checkins={checkins_deleted.deleted_count}")
+    return {
+        "success": True,
+        "user_id": user_id,
+        "screenings_deleted": screenings_deleted.deleted_count,
+        "piano_tasks_deleted": piano_deleted.deleted_count,
+        "checkins_deleted": checkins_deleted.deleted_count,
+    }
+
 @api_router.get("/screening/latest")
 async def get_latest_screening(user_id: Optional[str] = None):
     query = {"user_id": user_id} if user_id else {"user_id": None}
