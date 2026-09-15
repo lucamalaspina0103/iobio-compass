@@ -94,6 +94,7 @@ class PianoTask(BaseModel):
     task: str
     area: str
     completed: bool = False
+    optional: bool = False  # True = "extra" task beyond the day's minimum required
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class TaskComplete(BaseModel):
@@ -174,15 +175,33 @@ def calculate_indice_iobio(answers: List[ScreeningAnswer]) -> tuple[int, Dict[st
 
     return indice_iobio, area_averages, weak_areas
 
+def get_phase_for_day(day: int, total_areas: int) -> dict:
+    """Progressive phases (inspired by the '10-20 ramp' and BJ Fogg's Tiny Habits):
+    start with just 1 required action and ramp up gradually instead of demanding
+    everything from day 1."""
+    def cap(n: int) -> int:
+        return max(1, min(n, total_areas))
+
+    if day <= 7:
+        return {"key": "aggancio", "label": "Settimana 1 · Aggancio", "min_required": cap(1)}
+    if day <= 14:
+        return {"key": "consolidamento", "label": "Settimana 2 · Consolidamento", "min_required": cap(2)}
+    if day <= 21:
+        return {"key": "automatismo", "label": "Settimana 3 · Automatismo", "min_required": cap(2)}
+    return {"key": "mantenimento", "label": "Settimana 4 · Mantenimento", "min_required": cap(3)}
+
+
 async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = None) -> List[PianoTask]:
-    """Generate 30 days of micro-habits based on weak areas with robust fallback"""
+    """Generate 30 days of micro-habits based on weak areas with robust fallback.
+
+    Each day offers one task option per weak area (normally 3): the user chooses which
+    to complete. The number of options required to "succeed" the day ramps up over the
+    month (see get_phase_for_day), instead of forcing all of them from day 1."""
 
     # GUARDRAIL A: Ensure weak_areas is never empty
     if not weak_areas or len(weak_areas) == 0:
         weak_areas = ["stress", "sonno", "energia"]  # Default fallback
         print("TASK_FALLBACK_USED", {"reason": "weak_areas_empty", "fallback": weak_areas})
-
-    tasks_per_area = 10  # 30 days / 3 areas = 10 tasks per area
 
     task_templates = {
         "energia": [
@@ -195,7 +214,12 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Fai 10 respiri profondi durante la giornata",
             "Prendi il sole per 15 minuti",
             "Ascolta musica energizzante per 10 minuti",
-            "Fai una breve passeggiata dopo pranzo"
+            "Fai una breve passeggiata dopo pranzo",
+            "Fai una doccia rivitalizzante al mattino",
+            "Apri le tende appena sveglio per la luce naturale",
+            "Fai 2 minuti di jumping jack per svegliarti",
+            "Prepara la colazione la sera prima per non correre",
+            "Alzati e stiracchiati ogni ora di lavoro"
         ],
         "sonno": [
             "Vai a letto alla stessa ora",
@@ -207,7 +231,12 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Pratica 5 minuti di meditazione serale",
             "Scrivi 3 cose positive della giornata",
             "Bevi una tisana rilassante",
-            "Fai stretching leggero prima di dormire"
+            "Fai stretching leggero prima di dormire",
+            "Metti il telefono in un'altra stanza la sera",
+            "Fai una doccia tiepida prima di coricarti",
+            "Scrivi la lista delle cose da fare domani per liberare la mente",
+            "Riduci le luci in casa un'ora prima di dormire",
+            "Evita alcol nella serata"
         ],
         "stress": [
             "Pratica 2 minuti di respirazione profonda",
@@ -219,7 +248,12 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Pratica la gratitudine: annota 3 cose positive",
             "Fai stretching per rilassare le tensioni",
             "Disconnettiti dai social per 1 ora",
-            "Dedica 10 minuti a un hobby che ami"
+            "Dedica 10 minuti a un hobby che ami",
+            "Fai una lista delle priorità del giorno",
+            "Prova la tecnica di respirazione 4-7-8",
+            "Concediti 5 minuti di silenzio senza distrazioni",
+            "Scrivi su carta un pensiero negativo per ridimensionarlo",
+            "Fai una risata guardando qualcosa di divertente"
         ],
         "movimento": [
             "Cammina per 10 minuti",
@@ -231,7 +265,12 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Pratica yoga per 10 minuti",
             "Fai 5 minuti di esercizi a corpo libero",
             "Alzati e muoviti ogni ora",
-            "Prova un nuovo sport per 15 minuti"
+            "Prova un nuovo sport per 15 minuti",
+            "Fai 5000 passi oggi",
+            "Parcheggia più lontano e cammina un po' di più",
+            "Fai 10 minuti di camminata veloce",
+            "Fai qualche piegamento durante la giornata",
+            "Fai una sessione di bici o camminata all'aperto"
         ],
         "alimentazione": [
             "Mangia una porzione di verdura a pranzo",
@@ -243,7 +282,12 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Aggiungi proteine sane alla colazione",
             "Riduci lo zucchero raffinato",
             "Prova una nuova ricetta salutare",
-            "Mangia noci o semi come snack"
+            "Mangia noci o semi come snack",
+            "Fai la spesa con una lista per evitare acquisti impulsivi",
+            "Mastica lentamente ad ogni pasto",
+            "Sostituisci una bevanda zuccherata con acqua o tisana",
+            "Porta con te uno snack sano fuori casa",
+            "Aggiungi una nuova verdura alla tua dieta"
         ],
         "pelle": [
             "Applica crema idratante mattina e sera",
@@ -255,7 +299,12 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Dormi su una federa pulita",
             "Fai uno scrub delicato",
             "Applica una maschera idratante",
-            "Limita l'esposizione allo stress"
+            "Limita l'esposizione allo stress",
+            "Bevi un tè verde ricco di antiossidanti",
+            "Cambia la federa del cuscino questa settimana",
+            "Applica il contorno occhi prima di dormire",
+            "Evita docce troppo calde che seccano la pelle",
+            "Prenditi 5 minuti per un automassaggio al viso"
         ],
         "equilibrio_mentale": [
             "Medita per 5 minuti al mattino",
@@ -267,56 +316,65 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
             "Leggi qualcosa di ispirazionale",
             "Ascolta un podcast motivazionale",
             "Passa tempo nella natura",
-            "Pratica il perdono verso te stesso"
+            "Pratica il perdono verso te stesso",
+            "Fai 3 respiri consapevoli prima di iniziare la giornata",
+            "Scrivi una cosa che ti rende orgoglioso/a di te",
+            "Concediti una pausa senza sensi di colpa",
+            "Sorridi a te stesso/a allo specchio",
+            "Condividi un pensiero con una persona di fiducia"
         ]
     }
 
-    # GUARDRAIL B: Build task_list and ensure it's never empty
-    task_list = []
-    matched_areas = []
-    for area in weak_areas:
-        # Normalize area names (handle both "energia" and "Energia", "Equilibrio mentale" etc.)
+    generic_fallback = [
+        "Fai 5 minuti di respirazione lenta (4-6) oggi.",
+        "Fai una camminata di 10 minuti a passo comodo.",
+        "Bevi 1 bicchiere d'acqua in più oggi.",
+        "Spegni gli schermi 30 minuti prima di dormire.",
+        "Fai 2 minuti di stretching collo/spalle.",
+        "Mangia una porzione di verdura oggi.",
+        "Scrivi 3 cose positive della giornata.",
+        "Fai una pausa di 5 minuti senza schermi.",
+        "Pratica la gratitudine per 2 minuti.",
+        "Vai a letto alla stessa ora stasera."
+    ]
+
+    # GUARDRAIL B: Normalize area names and keep only the ones we have templates for
+    normalized_areas = []
+    for area in weak_areas[:3]:
         area_lower = area.lower().replace(" ", "_")
         if area_lower in task_templates:
-            task_list.extend(task_templates[area_lower])
-            matched_areas.append(area_lower)
-            print(f"PIANO_AREA_MATCHED: {area} -> {area_lower} ({len(task_templates[area_lower])} tasks)")
+            normalized_areas.append(area_lower)
+            print(f"PIANO_AREA_MATCHED: {area} -> {area_lower}")
         else:
             print(f"PIANO_AREA_NOT_FOUND: {area} (normalized: {area_lower})")
 
-    print(f"PIANO_TASK_LIST_SIZE: {len(task_list)} tasks from {len(matched_areas)} areas")
+    if not normalized_areas:
+        normalized_areas = ["__fallback__"]
+        task_templates["__fallback__"] = generic_fallback
+        print("TASK_FALLBACK_USED", {"weak_areas": weak_areas, "reason": "no_area_matched"})
 
-    # If task_list is still empty, use generic fallback
-    if not task_list:
-        task_list = [
-            "Fai 5 minuti di respirazione lenta (4-6) oggi.",
-            "Fai una camminata di 10 minuti a passo comodo.",
-            "Bevi 1 bicchiere d'acqua in più oggi.",
-            "Spegni gli schermi 30 minuti prima di dormire.",
-            "Fai 2 minuti di stretching collo/spalle.",
-            "Mangia una porzione di verdura oggi.",
-            "Scrivi 3 cose positive della giornata.",
-            "Fai una pausa di 5 minuti senza schermi.",
-            "Pratica la gratitudine per 2 minuti.",
-            "Vai a letto alla stessa ora stasera."
-        ]
-        print("TASK_FALLBACK_USED", {"weak_areas": weak_areas, "reason": "empty_task_list"})
+    print(f"PIANO_AREAS_USED: {normalized_areas}")
 
-    # GUARDRAIL C: Generate exactly 30 tasks
+    # GUARDRAIL C: Generate day-by-day, one task option per area, cycling each area's
+    # own pool independently so the same task doesn't repeat for as long as possible.
+    area_cursor = {area: 0 for area in normalized_areas}
     tasks = []
     for day_num in range(1, 31):  # Days 1-30
-        # Cycle through task_list
-        task_text = task_list[(day_num - 1) % len(task_list)]
-        # Rotate through weak_areas for area assignment
-        area = weak_areas[(day_num - 1) % len(weak_areas)]
+        phase = get_phase_for_day(day_num, len(normalized_areas))
 
-        task = PianoTask(
-            user_id=user_id,
-            day=day_num,
-            task=task_text,
-            area=area
-        )
-        tasks.append(task)
+        for idx, area in enumerate(normalized_areas):
+            pool = task_templates[area]
+            task_text = pool[area_cursor[area] % len(pool)]
+            area_cursor[area] += 1
+
+            task = PianoTask(
+                user_id=user_id,
+                day=day_num,
+                task=task_text,
+                area=area,
+                optional=idx >= phase["min_required"],
+            )
+            tasks.append(task)
 
     return tasks
 
