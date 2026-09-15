@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppContext } from '../../src/contexts/AppContext';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -12,10 +13,25 @@ interface Task {
   task: string;
   area: string;
   completed: boolean;
+  optional?: boolean;
 }
 
+// Area display info - deve corrispondere alle 7 aree reali dello screening
+// (vedi screening/questionnaire.tsx e piano/index.tsx)
+const AREA_INFO: { [key: string]: { name: string; color: string } } = {
+  energia: { name: 'Energia', color: '#FF9800' },
+  sonno: { name: 'Sonno', color: '#9C27B0' },
+  stress: { name: 'Stress', color: '#F44336' },
+  movimento: { name: 'Movimento', color: '#2196F3' },
+  alimentazione: { name: 'Alimentazione', color: '#4CAF50' },
+  pelle: { name: 'Pelle', color: '#00BCD4' },
+  equilibrio_mentale: { name: 'Equilibrio Mentale', color: '#E91E63' },
+};
+
+const getAreaInfo = (area: string) => AREA_INFO[area] || { name: area, color: '#7CB342' };
+
 export default function OggiScreen() {
-  const { user, isGuest, screeningResult } = useAppContext();
+  const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [todayTasks, setTodayTasks] = useState<Task[]>([]);
   const [showCheckin, setShowCheckin] = useState(false);
@@ -23,20 +39,43 @@ export default function OggiScreen() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Aspetta che AppContext finisca di caricare user/isGuest da storage, altrimenti
+    // interroghiamo il backend con user_id sbagliato (stessa race condition gia'
+    // risolta in piano/index.tsx).
+    if (!isBootstrapped) return;
     loadTasks();
-  }, []);
+  }, [isBootstrapped]);
+
+  // Stesso calcolo del "giorno corrente" usato in piano/index.tsx (stessa chiave
+  // AsyncStorage 'piano_start_date'), cosi' le due schermate restano coerenti.
+  const getCurrentDay = async (): Promise<number> => {
+    try {
+      const startDateStr = await AsyncStorage.getItem('piano_start_date');
+      if (startDateStr) {
+        const startDate = new Date(startDateStr);
+        const today = new Date();
+        const diffTime = today.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        return Math.min(Math.max(diffDays, 1), 30);
+      }
+      await AsyncStorage.setItem('piano_start_date', new Date().toISOString());
+      return 1;
+    } catch (error) {
+      console.error('Error calculating current day:', error);
+      return 1;
+    }
+  };
 
   const loadTasks = async () => {
     try {
       const userId = isGuest ? null : user?.id;
       const response = await fetch(`${API_URL}/api/piano/tasks?user_id=${userId || ''}`);
       const data = await response.json();
-      
+
       if (response.ok) {
         setTasks(data);
-        // Get today's tasks (first 3 for simplicity)
-        const today = data.slice(0, 3);
-        setTodayTasks(today);
+        const currentDay = await getCurrentDay();
+        setTodayTasks(data.filter((t: Task) => t.day === currentDay));
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -118,7 +157,7 @@ export default function OggiScreen() {
             </View>
           )}
 
-          <TouchableOpacity 
+          <Pressable 
             style={styles.checkinButton}
             onPress={() => setShowCheckin(true)}
           >
@@ -128,7 +167,7 @@ export default function OggiScreen() {
               <Text style={styles.checkinSubtitle}>1 minuto per il tuo benessere</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#7CB342" />
-          </TouchableOpacity>
+          </Pressable>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
@@ -140,23 +179,32 @@ export default function OggiScreen() {
                   </View>
                   <Text style={styles.progressText}>{completedCount}/{todayTasks.length}</Text>
                 </View>
-                {todayTasks.map((task) => (
-                  <TouchableOpacity
-                    key={task.id}
-                    style={styles.taskItem}
-                    onPress={() => toggleTask(task.id, task.completed)}
-                  >
-                    <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
-                      {task.completed && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
-                    </View>
-                    <View style={styles.taskContent}>
-                      <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]}>
-                        {task.task}
-                      </Text>
-                      <Text style={styles.taskArea}>{task.area}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {todayTasks.map((task) => {
+                  const info = getAreaInfo(task.area);
+                  return (
+                    <Pressable
+                      key={task.id}
+                      style={styles.taskItem}
+                      onPress={() => toggleTask(task.id, task.completed)}
+                    >
+                      <View style={[
+                        styles.checkbox,
+                        { borderColor: info.color },
+                        task.completed && { backgroundColor: info.color },
+                      ]}>
+                        {task.completed && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
+                      </View>
+                      <View style={styles.taskContent}>
+                        <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]}>
+                          {task.task}
+                        </Text>
+                        <Text style={[styles.taskArea, { color: info.color }]}>
+                          {info.name}{task.optional ? ' · extra' : ''}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </>
             ) : (
               <View style={styles.emptyState}>
@@ -178,9 +226,9 @@ export default function OggiScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Check-in Giornaliero</Text>
-              <TouchableOpacity onPress={() => setShowCheckin(false)}>
+              <Pressable onPress={() => setShowCheckin(false)}>
                 <Ionicons name="close" size={28} color="#4A4A4A" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <View style={styles.checkinQuestion}>
@@ -189,7 +237,7 @@ export default function OggiScreen() {
               <Text style={styles.questionLabel}>Energia</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={value}
                     style={[
                       styles.scaleButton,
@@ -205,14 +253,14 @@ export default function OggiScreen() {
                     >
                       {value}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
 
               <Text style={styles.questionLabel}>Umore</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={value}
                     style={[
                       styles.scaleButton,
@@ -228,14 +276,14 @@ export default function OggiScreen() {
                     >
                       {value}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
 
               <Text style={styles.questionLabel}>Qualità del sonno</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={value}
                     style={[
                       styles.scaleButton,
@@ -251,12 +299,12 @@ export default function OggiScreen() {
                     >
                       {value}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
             </View>
 
-            <TouchableOpacity
+            <Pressable
               style={[styles.submitButton, loading && styles.submitButtonDisabled]}
               onPress={submitCheckin}
               disabled={loading}
@@ -264,7 +312,7 @@ export default function OggiScreen() {
               <Text style={styles.submitButtonText}>
                 {loading ? 'Salvataggio...' : 'Completa Check-in'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </Modal>
