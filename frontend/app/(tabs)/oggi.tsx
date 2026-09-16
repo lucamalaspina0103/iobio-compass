@@ -190,14 +190,7 @@ export default function OggiScreen() {
           </Pressable>
 
           <View style={styles.section}>
-            <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
-              {todayTasks.length > 0 && (
-                <Text style={styles.sectionHint}>
-                  Ne bastano {todayPhase.minRequired} di {todayTasks.length}
-                </Text>
-              )}
-            </View>
+            <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
             {todayTasks.length > 0 ? (
               <>
                 <View style={styles.progressContainer}>
@@ -207,10 +200,17 @@ export default function OggiScreen() {
                   <Text style={styles.progressText}>{completedCount}/{todayTasks.length}</Text>
                 </View>
 
-                {todaySucceeded && (
+                {todaySucceeded ? (
                   <View style={styles.successBanner}>
                     <Ionicons name="checkmark-circle" size={18} color="#7CB342" />
                     <Text style={styles.successText}>Giornata riuscita, sei a posto!</Text>
+                  </View>
+                ) : (
+                  <View style={styles.requiredBanner}>
+                    <Ionicons name="alert-circle" size={18} color="#F57C00" />
+                    <Text style={styles.requiredText}>
+                      Completa almeno {todayPhase.minRequired} di {todayTasks.length} task per far riuscire la giornata
+                    </Text>
                   </View>
                 )}
 
@@ -524,21 +524,11 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#4A4A4A',
-  },
-  sectionHint: {
-    fontSize: 13,
-    color: '#7CB342',
-    fontWeight: '600',
+    marginBottom: 16,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -575,6 +565,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#4A7A2E',
+  },
+  requiredBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+    gap: 8,
+  },
+  requiredText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#E65100',
   },
   taskItem: {
     flexDirection: 'row',
