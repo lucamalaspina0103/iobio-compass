@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppContext } from '../../src/contexts/AppContext';
 import {
   PianoTask,
@@ -15,8 +16,12 @@ import {
   completeBackendTask,
   getWeeklySummary,
 } from '../../src/lib/pianoPlan';
+import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const CHECKIN_TODAY_KEY = 'checkin_today';
+
+const todayDateStr = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
 export default function OggiScreen() {
   const router = useRouter();
@@ -26,13 +31,30 @@ export default function OggiScreen() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [checkinData, setCheckinData] = useState({ energia: 0, umore: 0, sonno: 0 });
   const [loading, setLoading] = useState(false);
+  const [todaysReflection, setTodaysReflection] = useState<{ area: string; question: string } | null>(null);
+  const [showReflection, setShowReflection] = useState(false);
 
   useEffect(() => {
     // Aspetta che AppContext finisca di caricare user/isGuest da storage, altrimenti
     // interroghiamo la fonte sbagliata (bug gia' risolto in precedenza, da non perdere).
     if (!isBootstrapped) return;
     loadTasks();
+    loadTodaysCheckin();
   }, [isBootstrapped]);
+
+  const loadTodaysCheckin = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(CHECKIN_TODAY_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.date === todayDateStr()) {
+          setTodaysReflection(parsed.reflection);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading today\'s check-in:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -87,8 +109,15 @@ export default function OggiScreen() {
       });
 
       if (response.ok) {
-        Alert.alert('Successo', 'Check-in completato!');
+        const reflection = getDailyReflection(checkinData);
+        setTodaysReflection(reflection);
+        await AsyncStorage.setItem(CHECKIN_TODAY_KEY, JSON.stringify({
+          date: todayDateStr(),
+          data: checkinData,
+          reflection,
+        }));
         setShowCheckin(false);
+        setShowReflection(true);
         setCheckinData({ energia: 0, umore: 0, sonno: 0 });
       }
     } catch (error) {
@@ -165,17 +194,42 @@ export default function OggiScreen() {
             </View>
           )}
 
+          {!todaysReflection && (
+            <View style={styles.inviteRow}>
+              <Ionicons name="arrow-down" size={14} color="#7CB342" />
+              <Text style={styles.inviteText}>
+                Prima il check-in, poi i task: insieme per il tuo benessere olistico
+              </Text>
+            </View>
+          )}
+
           <Pressable
             style={styles.checkinButton}
             onPress={() => setShowCheckin(true)}
           >
-            <Ionicons name="heart-circle" size={32} color="#7CB342" />
+            <Ionicons
+              name={todaysReflection ? 'checkmark-circle' : 'heart-circle'}
+              size={32}
+              color="#7CB342"
+            />
             <View style={styles.checkinContent}>
               <Text style={styles.checkinTitle}>Check-in giornaliero</Text>
-              <Text style={styles.checkinSubtitle}>1 minuto per il tuo benessere</Text>
+              <Text style={styles.checkinSubtitle}>
+                {todaysReflection ? 'Fatto per oggi · tocca per rifarlo' : '1 minuto per il tuo benessere'}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#7CB342" />
           </Pressable>
+
+          {todaysReflection && (
+            <Pressable style={styles.reflectionCard} onPress={() => setShowReflection(true)}>
+              <Ionicons name="help-circle" size={22} color="#7CB342" />
+              <View style={styles.taskContent}>
+                <Text style={styles.reflectionLabel}>Un pensiero per oggi</Text>
+                <Text style={styles.reflectionQuestion}>{todaysReflection.question}</Text>
+              </View>
+            </Pressable>
+          )}
 
           <Pressable
             style={styles.coachButton}
@@ -378,6 +432,32 @@ export default function OggiScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showReflection}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowReflection(false)}
+      >
+        <View style={styles.reflectionOverlay}>
+          <View style={styles.reflectionModalContent}>
+            <Ionicons name="checkmark-circle" size={40} color="#7CB342" />
+            <Text style={styles.reflectionModalTitle}>Check-in completato!</Text>
+            <Text style={styles.reflectionModalHint}>
+              Non una risposta, solo una domanda per fermarti un attimo:
+            </Text>
+            <Text style={styles.reflectionModalQuestion}>
+              {todaysReflection?.question}
+            </Text>
+            <Text style={styles.reflectionModalFooter}>
+              Tra qualche giorno, in base a come va la settimana, arriveranno anche dei consigli mirati.
+            </Text>
+            <Pressable style={styles.reflectionModalButton} onPress={() => setShowReflection(false)}>
+              <Text style={styles.reflectionModalButtonText}>Continua</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -506,6 +586,95 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  inviteText: {
+    fontSize: 12,
+    color: '#7CB342',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  reflectionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F1F8E9',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: -12,
+    marginBottom: 24,
+    gap: 12,
+  },
+  reflectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7CB342',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  reflectionQuestion: {
+    fontSize: 14,
+    color: '#4A4A4A',
+    lineHeight: 20,
+  },
+  reflectionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  reflectionModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  reflectionModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4A4A4A',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  reflectionModalHint: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  reflectionModalQuestion: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  reflectionModalFooter: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  reflectionModalButton: {
+    backgroundColor: '#7CB342',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  reflectionModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   checkinContent: {
     flex: 1,
