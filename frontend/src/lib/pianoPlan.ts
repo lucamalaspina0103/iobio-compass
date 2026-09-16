@@ -231,6 +231,119 @@ export const isDaySucceeded = (day: number, dayTasks: PianoTask[]): boolean => {
   return dayTasks.filter(t => t.completed).length >= phase.minRequired;
 };
 
+// ===== Sintesi settimanale con consigli da esperti (ogni 7 giorni, prima del check-in) =====
+
+export const WEEKLY_CHECKPOINT_DAYS = [7, 14, 21, 28];
+
+export interface Expert {
+  name: string;
+  role: string;
+}
+
+// Un esperto/fonte di riconosciuta reputazione internazionale per ciascuna delle 7 aree
+// dello screening. Consigli parafrasati (non citazioni testuali) dal loro lavoro pubblico.
+export const EXPERTS: { [area: string]: Expert } = {
+  energia: { name: 'Andrew Huberman', role: 'Neuroscienziato, Stanford University' },
+  sonno: { name: 'Matthew Walker', role: 'Neuroscienziato, UC Berkeley · autore di "Why We Sleep"' },
+  stress: { name: 'Kelly McGonigal', role: 'Psicologa della salute, Stanford University' },
+  movimento: { name: 'Peter Attia', role: 'Medico, specialista in longevità' },
+  alimentazione: { name: 'Tim Spector', role: 'Epidemiologo, King\'s College London' },
+  pelle: { name: 'Howard Murad', role: 'Dermatologo e farmacista, UCLA · fondatore della filosofia "Inclusive Health"' },
+  equilibrio_mentale: { name: 'Jon Kabat-Zinn', role: 'Fondatore della Mindfulness-Based Stress Reduction' },
+};
+
+// 4 consigli per area, uno per ciascun checkpoint settimanale (giorno 7/14/21/28),
+// cosi' non si ripete mai lo stesso consiglio nello stesso piano di 30 giorni.
+export const WEEKLY_TIPS: { [area: string]: string[] } = {
+  energia: [
+    "Esponiti a luce naturale nei primi minuti dopo il risveglio: è il segnale più forte per il ritmo del tuo corpo.",
+    "Evita luce intensa dagli schermi nell'ora prima di dormire, per non compromettere l'energia del giorno dopo.",
+    "Pasti a orari regolari aiutano il corpo a mantenere un'energia più stabile durante il giorno.",
+    "Una breve pausa attiva ogni 90 minuti circa aiuta a mantenere concentrazione ed energia.",
+  ],
+  sonno: [
+    "Andare a letto e svegliarsi sempre alla stessa ora è l'abitudine singola più efficace per dormire meglio.",
+    "Anche un solo caffè nel tardo pomeriggio può ridurre sensibilmente la qualità del sonno profondo.",
+    "Una stanza fresca (intorno ai 18°C) aiuta il corpo ad addormentarsi più facilmente.",
+    "Riduci le luci in casa nell'ultima ora prima di dormire, per favorire la melatonina naturale.",
+  ],
+  stress: [
+    "Vedere lo stress come una sfida da affrontare, e non una minaccia, ne cambia l'effetto sul corpo.",
+    "Se qualcosa ti crea stress, spesso significa che quella cosa conta davvero per te.",
+    "Condividere ciò che ti pesa con qualcuno riduce l'impatto dello stress: non serve affrontarlo da solo.",
+    "Il cuore che batte forte è il corpo che si prepara ad affrontare la sfida, non a scappare.",
+  ],
+  movimento: [
+    "Una camminata a ritmo \"puoi ancora parlare\" alcune volte a settimana conta più di sessioni intense sporadiche.",
+    "La costanza nel muoversi conta più dell'intensità: meglio poco e spesso che tanto e raramente.",
+    "Muoversi regolarmente aiuta il corpo a usare meglio l'energia disponibile durante la giornata.",
+    "Anche solo alzarsi e camminare ogni ora spezza gli effetti dello stare seduti a lungo.",
+  ],
+  alimentazione: [
+    "Varia il più possibile i vegetali che mangi: conta più della singola \"dieta\" che segui.",
+    "Legumi, cereali integrali e semi contano come \"piante\" tanto quanto frutta e verdura.",
+    "I cibi fermentati (yogurt, kefir, crauti) supportano l'equilibrio dei batteri intestinali.",
+    "Preferisci cibi il più possibile vicini al loro stato naturale, riducendo gli ultra-processati.",
+  ],
+  pelle: [
+    "La salute della pelle riflette la salute di tutto il corpo: contano anche alimentazione, sonno e stress, non solo i prodotti che applichi.",
+    "Bere a sufficienza e mangiare cibi ricchi d'acqua aiuta le cellule della pelle a restare idratate anche dall'interno.",
+    "Gli antiossidanti della dieta (frutta e verdura colorata) proteggono la pelle tanto quanto una buona crema.",
+    "Il benessere emotivo si vede sulla pelle: prendersi cura dello stress fa parte della cura della pelle.",
+  ],
+  equilibrio_mentale: [
+    "Non serve aggiungere tempo: basta portare piena attenzione a qualcosa che già fai, come lavarti i denti.",
+    "La mindfulness è notare il momento presente senza giudicarlo, non \"svuotare la mente\".",
+    "Bastano pochi minuti al mattino per cambiare il tono di tutta la giornata.",
+    "Anche solo concentrarsi sul respiro per un minuto è già una forma completa di pratica.",
+  ],
+};
+
+export interface WeeklyTip {
+  area: string;
+  expert: Expert;
+  tip: string;
+}
+
+export interface WeeklySummary {
+  weekNumber: number; // 1-4
+  daysSucceededInWeek: number;
+  totalDaysInWeek: number;
+  tips: WeeklyTip[];
+}
+
+// Restituisce la sintesi settimanale (recap + 3 consigli, uno per area debole) solo nei
+// giorni di checkpoint (7/14/21/28), altrimenti null.
+export const getWeeklySummary = (
+  day: number,
+  weakAreas: string[],
+  allTasks: PianoTask[]
+): WeeklySummary | null => {
+  if (!WEEKLY_CHECKPOINT_DAYS.includes(day)) return null;
+
+  const weekNumber = day / 7; // 1, 2, 3, 4
+  const weekStart = day - 6;
+  const weekTasks = allTasks.filter(t => t.day >= weekStart && t.day <= day);
+  const daysInWeek = Array.from(new Set(weekTasks.map(t => t.day)));
+  const daysSucceededInWeek = daysInWeek.filter(d =>
+    isDaySucceeded(d, weekTasks.filter(t => t.day === d))
+  ).length;
+
+  const tipIndex = weekNumber - 1; // 0-3
+  const tips: WeeklyTip[] = weakAreas.slice(0, 3).map(area => {
+    const pool = WEEKLY_TIPS[area] || WEEKLY_TIPS['equilibrio_mentale'];
+    const expert = EXPERTS[area] || EXPERTS['equilibrio_mentale'];
+    return { area, expert, tip: pool[tipIndex % pool.length] };
+  });
+
+  return {
+    weekNumber,
+    daysSucceededInWeek,
+    totalDaysInWeek: daysInWeek.length,
+    tips,
+  };
+};
+
 // Giorno corrente del piano (1-30), calcolato dai giorni di calendario trascorsi
 // da quando il piano e' iniziato - non da quante volte apri l'app.
 export const getCurrentDay = async (): Promise<number> => {

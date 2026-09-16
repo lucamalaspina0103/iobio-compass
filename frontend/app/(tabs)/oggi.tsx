@@ -13,6 +13,7 @@ import {
   saveLocalTasks,
   fetchBackendTasks,
   completeBackendTask,
+  getWeeklySummary,
 } from '../../src/lib/pianoPlan';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -104,6 +105,14 @@ export default function OggiScreen() {
   const progress = todayTasks.length > 0 ? (completedCount / todayTasks.length) * 100 : 0;
   const todaySucceeded = completedCount >= todayPhase.minRequired;
 
+  // Sintesi settimanale con 3 consigli da esperti, solo nei giorni di checkpoint
+  // (7/14/21/28), prima del check-in - le aree deboli si ricavano dai task stessi
+  // cosi' funziona identico sia in modalita' Guest (locale) sia registrata (server).
+  const weakAreasFromTasks = Array.from(
+    new Set(allTasks.filter(t => t.day === 1).map(t => t.area))
+  );
+  const weeklySummary = getWeeklySummary(currentDay, weakAreasFromTasks, allTasks);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -126,6 +135,33 @@ export default function OggiScreen() {
                 <Text style={styles.scoreValue}>{screeningResult.indice_iobio}</Text>
               </View>
               <Ionicons name="leaf" size={48} color="#7CB342" />
+            </View>
+          )}
+
+          {weeklySummary && (
+            <View style={styles.weeklyCard}>
+              <View style={styles.weeklyHeader}>
+                <Ionicons name="calendar" size={22} color="#4A4A4A" />
+                <Text style={styles.weeklyTitle}>La tua settimana {weeklySummary.weekNumber}</Text>
+              </View>
+              <Text style={styles.weeklyRecap}>
+                {weeklySummary.daysSucceededInWeek} giorni riusciti su {weeklySummary.totalDaysInWeek} questa settimana
+              </Text>
+
+              {weeklySummary.tips.map((wt) => {
+                const info = getAreaInfo(wt.area);
+                return (
+                  <View key={wt.area} style={styles.weeklyTipRow}>
+                    <View style={[styles.weeklyTipDot, { backgroundColor: info.color }]} />
+                    <View style={styles.taskContent}>
+                      <Text style={styles.weeklyTipText}>{wt.tip}</Text>
+                      <Text style={styles.weeklyTipSource}>
+                        {wt.expert.name} · {wt.expert.role}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           )}
 
@@ -397,6 +433,53 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: 'bold',
     color: '#7CB342',
+  },
+  weeklyCard: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  weeklyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  weeklyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4A4A4A',
+  },
+  weeklyRecap: {
+    fontSize: 13,
+    color: '#8A6D3B',
+    marginBottom: 14,
+  },
+  weeklyTipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    gap: 10,
+  },
+  weeklyTipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  weeklyTipText: {
+    fontSize: 14,
+    color: '#4A4A4A',
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  weeklyTipSource: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic',
   },
   checkinButton: {
     flexDirection: 'row',
