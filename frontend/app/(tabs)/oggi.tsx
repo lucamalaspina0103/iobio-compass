@@ -2,100 +2,68 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useAppContext } from '../../src/contexts/AppContext';
+import {
+  PianoTask,
+  getAreaInfo,
+  getPhaseForDay,
+  getCurrentDay,
+  loadLocalTasks,
+  saveLocalTasks,
+  fetchBackendTasks,
+  completeBackendTask,
+} from '../../src/lib/pianoPlan';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-interface Task {
-  id: string;
-  day: number;
-  task: string;
-  area: string;
-  completed: boolean;
-  optional?: boolean;
-}
-
-// Area display info - deve corrispondere alle 7 aree reali dello screening
-// (vedi screening/questionnaire.tsx e piano/index.tsx)
-const AREA_INFO: { [key: string]: { name: string; color: string } } = {
-  energia: { name: 'Energia', color: '#FF9800' },
-  sonno: { name: 'Sonno', color: '#9C27B0' },
-  stress: { name: 'Stress', color: '#F44336' },
-  movimento: { name: 'Movimento', color: '#2196F3' },
-  alimentazione: { name: 'Alimentazione', color: '#4CAF50' },
-  pelle: { name: 'Pelle', color: '#00BCD4' },
-  equilibrio_mentale: { name: 'Equilibrio Mentale', color: '#E91E63' },
-};
-
-const getAreaInfo = (area: string) => AREA_INFO[area] || { name: area, color: '#7CB342' };
-
 export default function OggiScreen() {
+  const router = useRouter();
   const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [todayTasks, setTodayTasks] = useState<Task[]>([]);
+  const [allTasks, setAllTasks] = useState<PianoTask[]>([]);
+  const [currentDay, setCurrentDay] = useState(1);
   const [showCheckin, setShowCheckin] = useState(false);
   const [checkinData, setCheckinData] = useState({ energia: 0, umore: 0, sonno: 0 });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Aspetta che AppContext finisca di caricare user/isGuest da storage, altrimenti
-    // interroghiamo il backend con user_id sbagliato (stessa race condition gia'
-    // risolta in piano/index.tsx).
+    // interroghiamo la fonte sbagliata (bug gia' risolto in precedenza, da non perdere).
     if (!isBootstrapped) return;
     loadTasks();
   }, [isBootstrapped]);
 
-  // Stesso calcolo del "giorno corrente" usato in piano/index.tsx (stessa chiave
-  // AsyncStorage 'piano_start_date'), cosi' le due schermate restano coerenti.
-  const getCurrentDay = async (): Promise<number> => {
-    try {
-      const startDateStr = await AsyncStorage.getItem('piano_start_date');
-      if (startDateStr) {
-        const startDate = new Date(startDateStr);
-        const today = new Date();
-        const diffTime = today.getTime() - startDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        return Math.min(Math.max(diffDays, 1), 30);
-      }
-      await AsyncStorage.setItem('piano_start_date', new Date().toISOString());
-      return 1;
-    } catch (error) {
-      console.error('Error calculating current day:', error);
-      return 1;
-    }
-  };
-
   const loadTasks = async () => {
     try {
-      const userId = isGuest ? null : user?.id;
-      const response = await fetch(`${API_URL}/api/piano/tasks?user_id=${userId || ''}`);
-      const data = await response.json();
+      const day = await getCurrentDay();
+      setCurrentDay(day);
 
-      if (response.ok) {
-        setTasks(data);
-        const currentDay = await getCurrentDay();
-        setTodayTasks(data.filter((t: Task) => t.day === currentDay));
+      if (isGuest || !user?.id) {
+        const local = await loadLocalTasks(screeningResult);
+        setAllTasks(local);
+      } else {
+        const remote = await fetchBackendTasks(user.id);
+        setAllTasks(remote);
       }
     } catch (error) {
       console.error('Error loading tasks:', error);
     }
   };
 
+  // Stessa fonte dati (locale per Guest, server per utenti registrati) usata dalla
+  // schermata "Piano 30 giorni", cosi' un task flaggato qui risulta flaggato anche li'.
   const toggleTask = async (taskId: string, completed: boolean) => {
-    try {
-      const response = await fetch(`${API_URL}/api/piano/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: taskId, completed: !completed }),
-      });
+    const updated = allTasks.map(t => (t.id === taskId ? { ...t, completed: !completed } : t));
+    setAllTasks(updated);
 
-      if (response.ok) {
-        setTodayTasks(todayTasks.map(t => 
-          t.id === taskId ? { ...t, completed: !completed } : t
-        ));
+    try {
+      if (isGuest || !user?.id) {
+        await saveLocalTasks(updated);
+      } else {
+        await completeBackendTask(taskId, !completed);
       }
     } catch (error) {
+      setAllTasks(allTasks); // rollback
       Alert.alert('Errore', 'Impossibile aggiornare il task');
     }
   };
@@ -129,8 +97,12 @@ export default function OggiScreen() {
     }
   };
 
+  const todayTasks = allTasks.filter(t => t.day === currentDay);
+  const tomorrowTasks = allTasks.filter(t => t.day === currentDay + 1);
+  const todayPhase = getPhaseForDay(currentDay, todayTasks.length || 3);
   const completedCount = todayTasks.filter(t => t.completed).length;
   const progress = todayTasks.length > 0 ? (completedCount / todayTasks.length) * 100 : 0;
+  const todaySucceeded = completedCount >= todayPhase.minRequired;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -139,10 +111,10 @@ export default function OggiScreen() {
           <View style={styles.header}>
             <Text style={styles.greeting}>Ciao! 🌿</Text>
             <Text style={styles.date}>
-              {new Date().toLocaleDateString('it-IT', { 
-                weekday: 'long', 
-                day: 'numeric', 
-                month: 'long' 
+              {new Date().toLocaleDateString('it-IT', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long'
               })}
             </Text>
           </View>
@@ -157,7 +129,7 @@ export default function OggiScreen() {
             </View>
           )}
 
-          <Pressable 
+          <Pressable
             style={styles.checkinButton}
             onPress={() => setShowCheckin(true)}
           >
@@ -169,8 +141,27 @@ export default function OggiScreen() {
             <Ionicons name="chevron-forward" size={24} color="#7CB342" />
           </Pressable>
 
+          <Pressable
+            style={styles.coachButton}
+            onPress={() => router.push('/(tabs)/aicoach')}
+          >
+            <Ionicons name="chatbubble-ellipses" size={32} color="#7CB342" />
+            <View style={styles.checkinContent}>
+              <Text style={styles.checkinTitle}>AI Coach</Text>
+              <Text style={styles.checkinSubtitle}>Consigli e approfondimenti per te</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+          </Pressable>
+
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
+              {todayTasks.length > 0 && (
+                <Text style={styles.sectionHint}>
+                  Ne bastano {todayPhase.minRequired} di {todayTasks.length}
+                </Text>
+              )}
+            </View>
             {todayTasks.length > 0 ? (
               <>
                 <View style={styles.progressContainer}>
@@ -179,6 +170,14 @@ export default function OggiScreen() {
                   </View>
                   <Text style={styles.progressText}>{completedCount}/{todayTasks.length}</Text>
                 </View>
+
+                {todaySucceeded && (
+                  <View style={styles.successBanner}>
+                    <Ionicons name="checkmark-circle" size={18} color="#7CB342" />
+                    <Text style={styles.successText}>Giornata riuscita, sei a posto!</Text>
+                  </View>
+                )}
+
                 {todayTasks.map((task) => {
                   const info = getAreaInfo(task.area);
                   return (
@@ -205,6 +204,11 @@ export default function OggiScreen() {
                     </Pressable>
                   );
                 })}
+
+                <Pressable style={styles.planLink} onPress={() => router.push('/piano')}>
+                  <Text style={styles.planLinkText}>Vedi tutto il piano 30 giorni</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#7CB342" />
+                </Pressable>
               </>
             ) : (
               <View style={styles.emptyState}>
@@ -213,6 +217,28 @@ export default function OggiScreen() {
               </View>
             )}
           </View>
+
+          {/* Anteprima di domani, cosi' puoi organizzarti in anticipo - visibile una
+              volta che la giornata di oggi e' andata a buon fine */}
+          {todaySucceeded && tomorrowTasks.length > 0 && (
+            <View style={styles.tomorrowSection}>
+              <Text style={styles.tomorrowTitle}>Domani ti aspetta</Text>
+              {tomorrowTasks.map(task => {
+                const info = getAreaInfo(task.area);
+                return (
+                  <View key={task.id} style={styles.tomorrowItem}>
+                    <View style={[styles.tomorrowDot, { backgroundColor: info.color }]} />
+                    <View style={styles.taskContent}>
+                      <Text style={styles.tomorrowText}>{task.task}</Text>
+                      <Text style={[styles.taskArea, { color: info.color }]}>
+                        {info.name}{task.optional ? ' · extra' : ''}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -233,7 +259,7 @@ export default function OggiScreen() {
 
             <View style={styles.checkinQuestion}>
               <Text style={styles.questionText}>Come ti senti oggi?</Text>
-              
+
               <Text style={styles.questionLabel}>Energia</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
@@ -378,6 +404,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  coachButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -402,16 +441,26 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: '#4A4A4A',
-    marginBottom: 16,
+  },
+  sectionHint: {
+    fontSize: 13,
+    color: '#7CB342',
+    fontWeight: '600',
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   progressBar: {
     flex: 1,
@@ -429,6 +478,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#7CB342',
+  },
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+    gap: 8,
+  },
+  successText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4A7A2E',
   },
   taskItem: {
     flexDirection: 'row',
@@ -470,7 +533,51 @@ const styles = StyleSheet.create({
   },
   taskArea: {
     fontSize: 12,
+    fontWeight: '600',
+  },
+  planLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  planLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#7CB342',
+  },
+  tomorrowSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E8F5E9',
+    borderStyle: 'dashed',
+  },
+  tomorrowTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A4A4A',
+    marginBottom: 12,
+  },
+  tomorrowItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    gap: 10,
+  },
+  tomorrowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  tomorrowText: {
+    fontSize: 14,
+    color: '#4A4A4A',
+    marginBottom: 2,
   },
   emptyState: {
     alignItems: 'center',
