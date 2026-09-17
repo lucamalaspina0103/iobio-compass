@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appendLocalScreeningHistory } from '../lib/screeningHistory';
 
 interface User {
   id: string;
@@ -95,6 +96,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setScreeningResult(result);
     if (result) {
       await AsyncStorage.setItem('screeningResult', JSON.stringify(result));
+      // Tiene anche uno storico locale (oltre all'ultimo risultato), usato dalla
+      // vista "Il tuo percorso" per mostrare l'andamento nel tempo.
+      await appendLocalScreeningHistory(result);
     } else {
       await AsyncStorage.removeItem('screeningResult');
     }

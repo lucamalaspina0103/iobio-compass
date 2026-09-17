@@ -467,6 +467,19 @@ async def get_latest_screening(user_id: Optional[str] = None):
         screening["_id"] = str(screening["_id"])
     return screening
 
+@api_router.get("/screening/history")
+async def get_screening_history(user_id: Optional[str] = None):
+    """Tutti gli screening di un utente, dal piu' vecchio al piu' recente -
+    usato per la vista 'il tuo percorso' (andamento Indice IOBIO nel tempo)."""
+    query = {"user_id": user_id} if user_id else {"user_id": None}
+    screenings = await db.screenings.find(query).sort("date", 1).to_list(200)
+    for screening in screenings:
+        if "_id" in screening:
+            screening["_id"] = str(screening["_id"])
+        # Non serve rimandare al client tutte le risposte singole per uno storico
+        screening.pop("answers", None)
+    return screenings
+
 @api_router.post("/checkin/submit", response_model=CheckIn)
 async def submit_checkin(data: CheckInSubmit):
     checkin = CheckIn(

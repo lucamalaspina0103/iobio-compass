@@ -3,6 +3,12 @@ import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
+import {
+  ScreeningHistoryEntry,
+  loadLocalScreeningHistory,
+  fetchBackendScreeningHistory,
+} from '../../src/lib/screeningHistory';
+import { getAreaInfo } from '../../src/lib/pianoPlan';
 
 // Conditionally import victory-native only on mobile
 let VictoryPolarAxis: any = null;
@@ -28,24 +34,43 @@ const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const isWeb = Platform.OS === 'web';
 
 export default function MappaScreen() {
-  const { user, isGuest, screeningResult } = useAppContext();
+  const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
   const [checkinHistory, setCheckinHistory] = useState<any[]>([]);
+  const [screeningHistory, setScreeningHistory] = useState<ScreeningHistoryEntry[]>([]);
 
   useEffect(() => {
+    // Aspetta che AppContext finisca di caricare user/isGuest da storage, altrimenti
+    // interroghiamo la fonte sbagliata (stesso bug gia' risolto altrove).
+    if (!isBootstrapped) return;
     loadCheckinHistory();
-  }, []);
+    loadScreeningHistory();
+  }, [isBootstrapped]);
 
   const loadCheckinHistory = async () => {
     try {
       const userId = isGuest ? null : user?.id;
       const response = await fetch(`${API_URL}/api/checkin/history?user_id=${userId || ''}&days=14`);
       const data = await response.json();
-      
+
       if (response.ok) {
         setCheckinHistory(data);
       }
     } catch (error) {
       console.error('Error loading checkin history:', error);
+    }
+  };
+
+  const loadScreeningHistory = async () => {
+    try {
+      if (isGuest || !user?.id) {
+        const local = await loadLocalScreeningHistory();
+        setScreeningHistory(local);
+      } else {
+        const remote = await fetchBackendScreeningHistory(user.id);
+        setScreeningHistory(remote);
+      }
+    } catch (error) {
+      console.error('Error loading screening history:', error);
     }
   };
 
@@ -100,7 +125,7 @@ export default function MappaScreen() {
                         borderBottomWidth: 1,
                         borderBottomColor: '#F0F0F0'
                       }}>
-                        <Text style={{ color: '#4A4A4A', fontSize: 14 }}>{area}</Text>
+                        <Text style={{ color: '#4A4A4A', fontSize: 14 }}>{getAreaInfo(area).name}</Text>
                         <Text style={{ color: '#7CB342', fontSize: 14, fontWeight: '600' }}>
                           {screeningResult.area_scores[area]}/100
                         </Text>
@@ -137,14 +162,18 @@ export default function MappaScreen() {
                       tickValues={Object.keys(screeningResult.area_scores).map((_, i) => i + 1)}
                       tickFormat={(t) => {
                         const area = Object.keys(screeningResult.area_scores)[t - 1];
-                        return area && area.length > 12 ? area.substring(0, 10) + '...' : area;
+                        const label = area ? getAreaInfo(area).name : '';
+                        return label.length > 12 ? label.substring(0, 10) + '...' : label;
                       }}
                     />
                     <VictoryArea
-                      data={Object.keys(screeningResult.area_scores).map((area) => ({
-                        x: area.length > 15 ? area.substring(0, 12) + '...' : area,
-                        y: screeningResult.area_scores[area],
-                      }))}
+                      data={Object.keys(screeningResult.area_scores).map((area) => {
+                        const label = getAreaInfo(area).name;
+                        return {
+                          x: label.length > 15 ? label.substring(0, 12) + '...' : label,
+                          y: screeningResult.area_scores[area],
+                        };
+                      })}
                       style={{
                         data: {
                           fill: '#7CB342',
@@ -159,6 +188,56 @@ export default function MappaScreen() {
               </View>
             </>
           )}
+
+          {screeningHistory.length >= 2 && (() => {
+            const first = screeningHistory[0];
+            const last = screeningHistory[screeningHistory.length - 1];
+            const delta = last.indice_iobio - first.indice_iobio;
+            const shown = screeningHistory.slice(-10); // ultimi 10, per non affollare
+            const deltaColor = delta > 0 ? '#7CB342' : delta < 0 ? '#EF5350' : '#999';
+            const deltaIcon = delta > 0 ? 'trending-up' : delta < 0 ? 'trending-down' : 'remove';
+
+            return (
+              <View style={styles.chartCard}>
+                <Text style={styles.sectionTitle}>Il tuo percorso nel tempo</Text>
+                <Text style={styles.chartSubtitle}>
+                  Indice IOBIO su {screeningHistory.length} screening
+                </Text>
+
+                <View style={styles.trendDeltaRow}>
+                  <Ionicons name={deltaIcon as any} size={20} color={deltaColor} />
+                  <Text style={[styles.trendDeltaText, { color: deltaColor }]}>
+                    {delta > 0 ? '+' : ''}{delta} punti rispetto al primo screening
+                  </Text>
+                </View>
+
+                <View style={styles.barsRow}>
+                  {shown.map((entry, index) => {
+                    const isLast = index === shown.length - 1;
+                    const barHeight = Math.max(6, (entry.indice_iobio / 100) * 100);
+                    const dateLabel = new Date(entry.date).toLocaleDateString('it-IT', {
+                      day: 'numeric',
+                      month: 'short',
+                    });
+                    return (
+                      <View key={entry.id} style={styles.barColumn}>
+                        <Text style={styles.barValue}>{entry.indice_iobio}</Text>
+                        <View style={styles.barTrack}>
+                          <View
+                            style={[
+                              styles.barFill,
+                              { height: `${barHeight}%`, backgroundColor: isLast ? '#7CB342' : '#C5E1A5' },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.barDate}>{dateLabel}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })()}
 
           {trendData.length > 0 && (
             <View style={styles.chartCard}>
@@ -316,6 +395,47 @@ const styles = StyleSheet.create({
     color: '#999',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  trendDeltaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 20,
+  },
+  trendDeltaText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  barsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    height: 140,
+  },
+  barColumn: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  barValue: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    marginBottom: 4,
+  },
+  barTrack: {
+    width: 14,
+    height: 90,
+    justifyContent: 'flex-end',
+  },
+  barFill: {
+    width: '100%',
+    borderRadius: 4,
+  },
+  barDate: {
+    fontSize: 9,
+    color: '#999',
+    marginTop: 6,
   },
   journeyStages: {
     backgroundColor: '#FFFFFF',
