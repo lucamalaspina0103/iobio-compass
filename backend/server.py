@@ -515,6 +515,20 @@ async def login(user_data: UserLogin):
 
     return UserResponse(id=user_dict["id"], email=user_dict["email"])
 
+@api_router.post("/account/delete")
+async def delete_account(user_data: UserLogin):
+    """Cancella definitivamente l'account e tutti i dati collegati (screening, piano, stelle,
+    check-in, chat). Serve la password: non c'e' altra autenticazione sugli endpoint, quindi e'
+    l'unica garanzia che a chiederlo sia davvero la persona titolare dell'account."""
+    user_dict = await db.users.find_one({"email": user_data.email})
+    if not user_dict or not verify_password(user_data.password, user_dict["password_hash"]):
+        raise HTTPException(status_code=401, detail="Password non corretta")
+
+    await delete_user_progress(user_dict["id"])
+    await db.users.delete_one({"id": user_dict["id"]})
+    print(f"ACCOUNT_DELETED: user_id={user_dict['id']}")
+    return {"success": True}
+
 @api_router.post("/screening/submit", response_model=ScreeningResult)
 async def submit_screening(data: ScreeningSubmit):
     # Calculate scores
