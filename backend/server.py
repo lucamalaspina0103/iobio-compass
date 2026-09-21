@@ -462,8 +462,8 @@ async def submit_screening(data: ScreeningSubmit):
         delete_result = await db.piano_tasks.delete_many(query)
         print(f"PIANO_TASKS_DELETED: {delete_result.deleted_count} tasks removed for user_id={data.user_id}")
 
-    for task in tasks:
-        await db.piano_tasks.insert_one(task.dict())
+    if tasks:  # insert_many con lista vuota darebbe errore (es. scorrimento oltre l'ultimo giorno)
+        await db.piano_tasks.insert_many([task.dict() for task in tasks])
     print(f"PIANO_TASKS_CREATED: {len(tasks)} new tasks for user_id={data.user_id}")
 
     return result
