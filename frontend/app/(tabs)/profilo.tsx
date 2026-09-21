@@ -1,33 +1,74 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+
 export default function ProfiloScreen() {
   const router = useRouter();
   const { user, isGuest, screeningResult, logout } = useAppContext();
   const [showResetModal, setShowResetModal] = useState(false);
   const [showRetakeModal, setShowRetakeModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
+  // Modal e non Alert.alert: su web Alert.alert non mostra nulla e "Esci" resterebbe muto.
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Sei sicuro di voler uscire?',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Esci',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/onboarding/welcome');
-          },
-        },
-      ]
-    );
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    await logout();
+    router.replace('/onboarding/welcome');
+  };
+
+  const openDeleteModal = () => {
+    setDeletePassword('');
+    setDeleteError(null);
+    setShowDeleteModal(true);
+  };
+
+  // Cancella per sempre account e dati dal server (serve la password), poi svuota il dispositivo.
+  const confirmDeleteAccount = async () => {
+    if (!user?.email) return;
+    if (!deletePassword) {
+      setDeleteError('Inserisci la tua password per confermare.');
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(`${API_URL}/api/account/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email, password: deletePassword }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setDeleteError(typeof data?.detail === 'string' ? data.detail : "Non è stato possibile eliminare l'account, riprova.");
+        return;
+      }
+      setShowDeleteModal(false);
+      await logout();
+      router.replace('/onboarding/welcome');
+    } catch (error) {
+      setDeleteError('Non riesco a collegarmi al server. Controlla la connessione e riprova.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const goSaveProgress = () => {
+    setShowLogoutModal(false);
+    router.push('/salva-progressi');
   };
 
   const handleRetakeScreening = () => {
@@ -74,6 +115,21 @@ export default function ProfiloScreen() {
               </View>
             )}
           </View>
+
+          {isGuest && (
+            <Pressable style={styles.saveCard} onPress={() => router.push('/salva-progressi')}>
+              <View style={styles.saveIcon}>
+                <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.saveTextWrap}>
+                <Text style={styles.saveTitle}>Salva i tuoi progressi</Text>
+                <Text style={styles.saveText}>
+                  Crea un account gratuito: piano, stelle e storico restano al sicuro.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+            </Pressable>
+          )}
 
           {screeningResult && (
             <View style={styles.statsCard}>
@@ -198,6 +254,12 @@ export default function ProfiloScreen() {
             <Text style={styles.logoutText}>Esci</Text>
           </Pressable>
 
+          {!isGuest && (
+            <Pressable style={styles.deleteAccountLink} onPress={openDeleteModal}>
+              <Text style={styles.deleteAccountText}>Elimina il mio account</Text>
+            </Pressable>
+          )}
+
           <View style={styles.footer}>
             <Ionicons name="leaf" size={24} color="#7CB342" />
             <Text style={styles.footerText}>IOBIO Compass</Text>
@@ -234,6 +296,80 @@ export default function ProfiloScreen() {
                 onPress={confirmRetakeScreening}
               >
                 <Text style={styles.modalButtonConfirmText}>Continua</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showLogoutModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name={isGuest ? 'warning' : 'log-out'} size={48} color="#FF9800" />
+            </View>
+            <Text style={styles.modalTitle}>{isGuest ? 'Aspetta un attimo' : 'Vuoi uscire?'}</Text>
+            <Text style={styles.modalText}>
+              {isGuest
+                ? 'Sei in modalità Guest: piano, stelle e storico sono salvati solo su questo dispositivo. Se esci ora li perdi.'
+                : 'Potrai rientrare in qualsiasi momento con la tua email e password: i tuoi progressi restano salvati.'}
+            </Text>
+            {isGuest && (
+              <Pressable style={styles.modalButtonPrimary} onPress={goSaveProgress}>
+                <Text style={styles.modalButtonConfirmText}>Salva prima i progressi</Text>
+              </Pressable>
+            )}
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalButtonCancel} onPress={() => setShowLogoutModal(false)}>
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </Pressable>
+              <Pressable style={styles.modalButtonConfirm} onPress={confirmLogout}>
+                <Text style={styles.modalButtonConfirmText}>{isGuest ? 'Esci comunque' : 'Esci'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showDeleteModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="trash" size={48} color="#EF5350" />
+            </View>
+            <Text style={styles.modalTitle}>Eliminare l'account?</Text>
+            <Text style={styles.modalText}>
+              Cancelliamo per sempre il tuo account, il piano, le stelle e lo storico. Non si può annullare.
+            </Text>
+            <TextInput
+              style={styles.deleteInput}
+              placeholder="Inserisci la tua password"
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              autoComplete="current-password"
+            />
+            {deleteError && <Text style={styles.deleteError}>{deleteError}</Text>}
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalButtonCancel} onPress={() => setShowDeleteModal(false)}>
+                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButtonDanger, deleting && { opacity: 0.6 }]}
+                onPress={confirmDeleteAccount}
+                disabled={deleting}
+              >
+                <Text style={styles.modalButtonConfirmText}>{deleting ? 'Elimino...' : 'Elimina'}</Text>
               </Pressable>
             </View>
           </View>
@@ -538,5 +674,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  modalButtonDanger: {
+    flex: 1,
+    backgroundColor: '#EF5350',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  deleteInput: {
+    width: '100%',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: 12,
+  },
+  deleteError: {
+    color: '#C62828',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  deleteAccountLink: {
+    alignItems: 'center',
+    marginTop: -16,
+    marginBottom: 24,
+    padding: 8,
+  },
+  deleteAccountText: {
+    color: '#999',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  modalButtonPrimary: {
+    width: '100%',
+    backgroundColor: '#7CB342',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  saveCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F8E9',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: '#7CB342',
+    gap: 12,
+  },
+  saveIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#7CB342',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveTextWrap: {
+    flex: 1,
+  },
+  saveTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4A4A4A',
+    marginBottom: 2,
+  },
+  saveText: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
   },
 });

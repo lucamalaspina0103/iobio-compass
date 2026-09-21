@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../src/contexts/AppContext';
@@ -13,10 +13,13 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAuth = async () => {
+    // Messaggio a schermo e non Alert.alert: su web Alert.alert non mostra nulla
+    setError(null);
     if (!email || !password) {
-      Alert.alert('Errore', 'Inserisci email e password');
+      setError('Inserisci email e password');
       return;
     }
 
@@ -32,7 +35,7 @@ export default function AuthScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        Alert.alert('Errore', data.detail || 'Errore durante l\'autenticazione');
+        setError(typeof data.detail === 'string' ? data.detail : 'Controlla email e password e riprova');
         return;
       }
 
@@ -40,7 +43,7 @@ export default function AuthScreen() {
       setIsGuest(false);
       router.push('/onboarding/privacy');
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile connettersi al server');
+      setError('Impossibile connettersi al server');
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,9 @@ export default function AuthScreen() {
                 />
               </View>
 
-              <TouchableOpacity 
+              {error && <Text style={styles.errorText}>{error}</Text>}
+
+              <Pressable
                 style={[styles.button, loading && styles.buttonDisabled]}
                 onPress={handleAuth}
                 disabled={loading}
@@ -96,13 +101,13 @@ export default function AuthScreen() {
                 <Text style={styles.buttonText}>
                   {loading ? 'Caricamento...' : (isLogin ? 'Accedi' : 'Registrati')}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
+              <Pressable onPress={() => setIsLogin(!isLogin)}>
                 <Text style={styles.switchText}>
                   {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <View style={styles.divider}>
@@ -111,12 +116,12 @@ export default function AuthScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity 
+            <Pressable 
               style={styles.guestButton}
               onPress={handleGuest}
             >
               <Text style={styles.guestButtonText}>Continua come Guest</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -176,6 +181,13 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#C62828',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   buttonText: {
     color: '#FFFFFF',
