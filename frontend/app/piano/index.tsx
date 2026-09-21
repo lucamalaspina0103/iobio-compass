@@ -23,6 +23,8 @@ import {
   completeBackendTask,
   MILESTONES,
 } from '../../src/lib/pianoPlan';
+import { computeStreaks, computeStars, getDayStars } from '../../src/lib/rewards';
+import StarRow from '../../src/components/StarRow';
 
 export default function PianoScreen() {
   const router = useRouter();
@@ -70,6 +72,10 @@ export default function PianoScreen() {
   }, [loadTasks]);
 
   const toggleTaskCompletion = async (taskId: string) => {
+    // I giorni futuri si possono vedere ma non spuntare in anticipo
+    const targetTask = tasks.find(t => t.id === taskId);
+    if (targetTask && targetTask.day > currentDay) return;
+
     const updatedTasks = tasks.map(task =>
       task.id === taskId ? { ...task, completed: !task.completed } : task
     );
@@ -112,21 +118,11 @@ export default function PianoScreen() {
   const todayCompletedCount = todayTasks.filter(t => t.completed).length;
   const todaySucceeded = todayCompletedCount >= todayPhase.minRequired;
 
-  const isDaySucceeded = (day: number, dayTasks: PianoTask[]) => {
-    const phase = getPhaseForDay(day, dayTasks.length || 3);
-    return dayTasks.filter(t => t.completed).length >= phase.minRequired;
-  };
-
-  // Serie di giorni consecutivi riusciti, contando a ritroso da oggi
-  let streak = 0;
-  for (let day = currentDay; day >= 1; day--) {
-    const dayTasks = tasksByDay[day] || [];
-    if (dayTasks.length > 0 && isDaySucceeded(day, dayTasks)) {
-      streak++;
-    } else {
-      break;
-    }
-  }
+  // Serie e stelle condivise con la schermata Oggi. La serie non si azzera solo perche'
+  // oggi non hai ancora fatto i task: se oggi non e' ancora riuscito si conta da ieri.
+  const streaks = computeStreaks(tasks, currentDay);
+  const streak = streaks.current;
+  const stars = computeStars(tasks, streaks.best, currentDay);
   const nextMilestone = MILESTONES.find(m => m > streak);
 
   if (loading) {
@@ -179,6 +175,14 @@ export default function PianoScreen() {
           <Text style={styles.progressStats}>
             {completedTasks} di {tasks.length} attività completate
           </Text>
+
+          <View style={styles.totalStarsRow}>
+            <Ionicons name="star" size={18} color="#FFB300" />
+            <Text style={styles.totalStarsText}>
+              {stars.total} {stars.total === 1 ? 'stella guadagnata' : 'stelle guadagnate'}
+              {stars.bonusStars > 0 ? ` (di cui ${stars.bonusStars} di bonus)` : ''}
+            </Text>
+          </View>
 
           {streak > 0 && (
             <View style={styles.streakRow}>
@@ -290,11 +294,20 @@ export default function PianoScreen() {
                     </View>
                   </View>
 
-                  <Ionicons
-                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color="#999"
-                  />
+                  <View style={styles.dayRight}>
+                    {dayTasks.length > 0 && day <= currentDay && (
+                      <StarRow
+                        earned={getDayStars(dayTasks).earned}
+                        max={getDayStars(dayTasks).max}
+                        size={13}
+                      />
+                    )}
+                    <Ionicons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={20}
+                      color="#999"
+                    />
+                  </View>
                 </Pressable>
 
                 {isExpanded && dayTasks.length > 0 && (
@@ -447,6 +460,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  totalStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 6,
+  },
+  totalStarsText: {
+    fontSize: 13,
+    color: '#8A6D3B',
+    fontWeight: '600',
+  },
+  dayRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   streakRow: {
     flexDirection: 'row',

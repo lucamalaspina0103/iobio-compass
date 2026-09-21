@@ -17,6 +17,19 @@ import {
   getWeeklySummary,
 } from '../../src/lib/pianoPlan';
 import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
+import {
+  computeStreaks,
+  computeStars,
+  getDayStars,
+  MILESTONE_MESSAGES,
+  MILESTONE_STAR_BONUS,
+  getMilestoneStatLine,
+  loadCelebrated,
+  saveCelebrated,
+  getPendingMilestone,
+} from '../../src/lib/rewards';
+import { MILESTONES } from '../../src/lib/pianoPlan';
+import StarRow from '../../src/components/StarRow';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const CHECKIN_TODAY_KEY = 'checkin_today';
@@ -33,6 +46,9 @@ export default function OggiScreen() {
   const [loading, setLoading] = useState(false);
   const [todaysReflection, setTodaysReflection] = useState<{ area: string; question: string } | null>(null);
   const [showReflection, setShowReflection] = useState(false);
+  const [celebrated, setCelebrated] = useState<number[]>([]);
+  const [celebratedLoaded, setCelebratedLoaded] = useState(false);
+  const [celebration, setCelebration] = useState<number | null>(null);
 
   useEffect(() => {
     // Aspetta che AppContext finisca di caricare user/isGuest da storage, altrimenti
@@ -40,7 +56,30 @@ export default function OggiScreen() {
     if (!isBootstrapped) return;
     loadTasks();
     loadTodaysCheckin();
+    loadCelebrated().then(list => {
+      setCelebrated(list);
+      setCelebratedLoaded(true);
+    });
   }, [isBootstrapped]);
+
+  // Festeggia un nuovo traguardo di serie (una sola volta per traguardo), ma mai mentre
+  // e' aperta un'altra finestra (check-in / riflessione).
+  useEffect(() => {
+    if (!celebratedLoaded || allTasks.length === 0 || celebration !== null) return;
+    if (showCheckin || showReflection) return;
+    const { best } = computeStreaks(allTasks, currentDay);
+    const pending = getPendingMilestone(best, celebrated);
+    if (pending !== null) setCelebration(pending);
+  }, [allTasks, currentDay, celebrated, celebratedLoaded, showCheckin, showReflection, celebration]);
+
+  const dismissCelebration = async () => {
+    if (celebration === null) return;
+    // Segna come festeggiati anche i traguardi inferiori, per non accodare messaggi arretrati
+    const updated = Array.from(new Set([...celebrated, ...MILESTONES.filter(m => m <= celebration)]));
+    setCelebrated(updated);
+    setCelebration(null);
+    await saveCelebrated(updated);
+  };
 
   const loadTodaysCheckin = async () => {
     try {
@@ -142,19 +181,32 @@ export default function OggiScreen() {
   );
   const weeklySummary = getWeeklySummary(currentDay, weakAreasFromTasks, allTasks);
 
+  // Stelle: una per azione completata (solo giorni fino a oggi) + bonus dei traguardi
+  const streaks = computeStreaks(allTasks, currentDay);
+  const stars = computeStars(allTasks, streaks.best, currentDay);
+  const dayStars = getDayStars(todayTasks);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.greeting}>Ciao! 🌿</Text>
-            <Text style={styles.date}>
-              {new Date().toLocaleDateString('it-IT', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long'
-              })}
-            </Text>
+          <View style={styles.headerRow}>
+            <View style={styles.header}>
+              <Text style={styles.greeting}>Ciao! 🌿</Text>
+              <Text style={styles.date}>
+                {new Date().toLocaleDateString('it-IT', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long'
+                })}
+              </Text>
+            </View>
+            {allTasks.length > 0 && (
+              <View style={styles.starChip}>
+                <Ionicons name="star" size={18} color="#FFB300" />
+                <Text style={styles.starChipText}>{stars.total}</Text>
+              </View>
+            )}
           </View>
 
           {screeningResult && (
@@ -251,7 +303,7 @@ export default function OggiScreen() {
                   <View style={styles.progressBar}>
                     <View style={[styles.progressFill, { width: `${progress}%` }]} />
                   </View>
-                  <Text style={styles.progressText}>{completedCount}/{todayTasks.length}</Text>
+                  <StarRow earned={dayStars.earned} max={dayStars.max} size={18} />
                 </View>
 
                 {todaySucceeded ? (
@@ -458,6 +510,35 @@ export default function OggiScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={celebration !== null}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={dismissCelebration}
+      >
+        <View style={styles.reflectionOverlay}>
+          {celebration !== null && MILESTONE_MESSAGES[celebration] && (
+            <View style={styles.reflectionModalContent}>
+              <Ionicons
+                name={MILESTONE_MESSAGES[celebration].icon as any}
+                size={48}
+                color={MILESTONE_MESSAGES[celebration].color}
+              />
+              <Text style={styles.reflectionModalTitle}>{MILESTONE_MESSAGES[celebration].title}</Text>
+              <View style={styles.bonusRow}>
+                <StarRow earned={3} max={3} size={22} />
+                <Text style={styles.bonusText}>+{MILESTONE_STAR_BONUS[celebration]} stelle bonus</Text>
+              </View>
+              <Text style={styles.celebrationMessage}>{MILESTONE_MESSAGES[celebration].message}</Text>
+              <Text style={styles.reflectionModalFooter}>{getMilestoneStatLine(allTasks)}</Text>
+              <Pressable style={styles.reflectionModalButton} onPress={dismissCelebration}>
+                <Text style={styles.reflectionModalButtonText}>Continua</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -473,8 +554,48 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 24,
+  },
+  header: {
+    flex: 1,
+  },
+  starChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
+  starChipText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8A6D3B',
+  },
+  bonusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  bonusText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#8A6D3B',
+  },
+  celebrationMessage: {
+    fontSize: 15,
+    color: '#4A4A4A',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
   },
   greeting: {
     fontSize: 32,
