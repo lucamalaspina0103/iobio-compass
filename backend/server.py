@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import bcrypt
 import random
 from anthropic import AsyncAnthropic
@@ -40,9 +40,31 @@ class User(BaseModel):
     password_hash: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class GuestScreening(BaseModel):
+    indice_iobio: int
+    area_scores: Dict[str, int]
+    weak_areas: List[str]
+    date: Optional[str] = None  # ISO 8601
+
+class GuestTask(BaseModel):
+    day: int
+    task: str
+    area: str
+    completed: bool = False
+    optional: bool = False
+
+class GuestData(BaseModel):
+    """Tutto quello che un Guest ha costruito sul dispositivo, da portare nel nuovo account."""
+    screenings: List[GuestScreening] = []
+    tasks: List[GuestTask] = []
+    start_date: Optional[str] = None
+    banked_stars: int = 0
+    cycles: int = 0
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
+    guest_data: Optional[GuestData] = None  # presente quando un Guest salva i suoi progressi
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -387,6 +409,68 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
 
     return tasks
 
+def parse_client_date(value: Optional[str]) -> Optional[datetime]:
+    """ISO 8601 dal client (JS o Python) -> datetime naive in UTC, come il resto del database."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+async def delete_user_progress(user_id: str):
+    """Cancella tutto cio' che riguarda i progressi di un utente (non l'account)."""
+    for collection in (db.screenings, db.piano_tasks, db.checkins, db.piano_state, db.chat_history):
+        await collection.delete_many({"user_id": user_id})
+
+async def migrate_guest_data(user_id: str, guest: GuestData):
+    """Porta nel nuovo account lo storico screening, il piano con le spunte, la data di
+    inizio e la cassaforte stelle costruiti da Guest sul dispositivo."""
+    if len(guest.screenings) > 100 or len(guest.tasks) > 300:
+        raise HTTPException(status_code=400, detail="Dati da trasferire non validi")
+
+    screening_docs = [
+        ScreeningResult(
+            user_id=user_id,
+            answers=[],  # le singole risposte non sono conservate sul dispositivo
+            indice_iobio=s.indice_iobio,
+            area_scores=s.area_scores,
+            weak_areas=s.weak_areas,
+            date=parse_client_date(s.date) or datetime.utcnow(),
+        ).dict()
+        for s in guest.screenings
+    ]
+    if screening_docs:
+        await db.screenings.insert_many(screening_docs)
+
+    task_docs = [
+        PianoTask(
+            user_id=user_id,
+            day=t.day,
+            task=t.task[:300],
+            area=t.area,
+            completed=t.completed,
+            optional=t.optional,
+        ).dict()
+        for t in guest.tasks
+        if 1 <= t.day <= 30
+    ]
+    if task_docs:
+        await db.piano_tasks.insert_many(task_docs)
+
+    state: Dict[str, Any] = {}
+    start = parse_client_date(guest.start_date)
+    if start:
+        state["start_date"] = start.isoformat() + "Z"
+    if guest.banked_stars > 0:
+        state["banked_stars"] = min(guest.banked_stars, 5000)
+        state["cycles"] = max(0, min(guest.cycles, 100))
+    if state:
+        await db.piano_state.update_one({"user_id": user_id}, {"$set": state}, upsert=True)
+
 # ===== ROUTES =====
 
 @api_router.post("/register", response_model=UserResponse)
@@ -401,6 +485,21 @@ async def register(user_data: UserRegister):
         email=user_data.email,
         password_hash=hash_password(user_data.password)
     )
+
+    # Un Guest che salva i progressi porta con se' i suoi dati. Si trasferiscono PRIMA di
+    # creare l'account: se qualcosa va storto si ripulisce tutto e l'utente puo' riprovare
+    # con la stessa email, senza restare con un account vuoto.
+    if user_data.guest_data:
+        try:
+            await migrate_guest_data(user.id, user_data.guest_data)
+        except HTTPException:
+            await delete_user_progress(user.id)
+            raise
+        except Exception as e:
+            print(f"GUEST_MIGRATION_FAILED: {e}")
+            await delete_user_progress(user.id)
+            raise HTTPException(status_code=500, detail="Non siamo riusciti a trasferire i tuoi progressi. Riprova.")
+
     await db.users.insert_one(user.dict())
 
     return UserResponse(id=user.id, email=user.email)
