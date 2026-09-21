@@ -565,7 +565,8 @@ async def get_checkin_history(user_id: Optional[str] = None, days: int = 30):
 @api_router.get("/piano/tasks")
 async def get_piano_tasks(user_id: Optional[str] = None):
     query = {"user_id": user_id} if user_id else {"user_id": None}
-    tasks = await db.piano_tasks.find(query).sort("day", 1).to_list(30)
+    # 30 giorni x fino a 3 opzioni al giorno = 90 task (tetto largo per sicurezza)
+    tasks = await db.piano_tasks.find(query).sort("day", 1).to_list(300)
     # Convert ObjectId to string for each task
     for task in tasks:
         if "_id" in task:
