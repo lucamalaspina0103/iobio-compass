@@ -21,8 +21,10 @@ import {
   saveLocalTasks,
   fetchBackendTasks,
   completeBackendTask,
+  syncStartDateFromServer,
   MILESTONES,
 } from '../../src/lib/pianoPlan';
+import { getBankedStars } from '../../src/lib/rescreen';
 import { computeStreaks, computeStars, getDayStars } from '../../src/lib/rewards';
 import StarRow from '../../src/components/StarRow';
 
@@ -36,14 +38,21 @@ export default function PianoScreen() {
   const [currentDay, setCurrentDay] = useState(1);
   const [expandedDays, setExpandedDays] = useState<number[]>([]);
 
-  useEffect(() => {
-    getCurrentDay().then(setCurrentDay);
-  }, []);
+  const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
 
   // Carica il piano: locale per i Guest (privato al dispositivo), dal server per
   // gli utenti registrati (condiviso tra dispositivi). Stessa fonte usata da Oggi.
   const loadTasks = useCallback(async () => {
     try {
+      // Utenti registrati: data di inizio ciclo e cassaforte stelle vivono sul server
+      if (!isGuest && user?.id) {
+        const state = await syncStartDateFromServer(user.id);
+        setBankedStars(state?.banked_stars ?? 0);
+      } else {
+        setBankedStars(await getBankedStars(true));
+      }
+      setCurrentDay(await getCurrentDay());
+
       if (isGuest || !user?.id) {
         const local = await loadLocalTasks(screeningResult);
         setTasks(local);
@@ -179,8 +188,9 @@ export default function PianoScreen() {
           <View style={styles.totalStarsRow}>
             <Ionicons name="star" size={18} color="#FFB300" />
             <Text style={styles.totalStarsText}>
-              {stars.total} {stars.total === 1 ? 'stella guadagnata' : 'stelle guadagnate'}
+              {stars.total + bankedStars} {stars.total + bankedStars === 1 ? 'stella guadagnata' : 'stelle guadagnate'}
               {stars.bonusStars > 0 ? ` (di cui ${stars.bonusStars} di bonus)` : ''}
+              {bankedStars > 0 ? ` · ${bankedStars} dai percorsi precedenti` : ''}
             </Text>
           </View>
 

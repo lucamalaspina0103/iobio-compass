@@ -63,6 +63,15 @@ class ScreeningAnswer(BaseModel):
 class ScreeningSubmit(BaseModel):
     user_id: Optional[str] = None
     answers: List[ScreeningAnswer]
+    # Piano "a scorrimento": quanti giorni gia' vissuti del ciclo in corso restano
+    # com'erano (0 = si apre un nuovo ciclo da capo). Solo per utenti registrati.
+    keep_until_day: int = 0
+    # Stelle del ciclo che si chiude, da mettere in cassaforte (solo con keep_until_day=0)
+    closing_stars: int = 0
+
+class PianoStart(BaseModel):
+    user_id: str
+    start_date: str  # ISO 8601
 
 class ScreeningResult(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -424,18 +433,66 @@ async def submit_screening(data: ScreeningSubmit):
     # Save to database
     await db.screenings.insert_one(result.dict())
 
-    # Delete existing piano tasks for this user before generating new ones
     query = {"user_id": data.user_id} if data.user_id else {"user_id": None}
-    delete_result = await db.piano_tasks.delete_many(query)
-    print(f"PIANO_TASKS_DELETED: {delete_result.deleted_count} tasks removed for user_id={data.user_id}")
 
-    # Generate piano tasks
+    # Piano "a scorrimento": se il ciclo e' in corso, i giorni gia' vissuti (e le stelle
+    # guadagnate) restano intatti e cambiano solo quelli da oggi in poi. Vale solo per gli
+    # utenti registrati e solo se quei giorni esistono davvero, altrimenti si riparte.
+    keep = max(0, min(data.keep_until_day, 30)) if data.user_id else 0
+    if keep > 0:
+        already_lived = await db.piano_tasks.count_documents({**query, "day": {"$lte": keep}})
+        if already_lived == 0:
+            keep = 0
+
     tasks = await generate_piano_tasks(weak_areas, data.user_id)
+
+    if keep > 0:
+        delete_result = await db.piano_tasks.delete_many({**query, "day": {"$gt": keep}})
+        tasks = [t for t in tasks if t.day > keep]
+        print(f"PIANO_TASKS_SLID: kept days<={keep}, {delete_result.deleted_count} future tasks replaced for user_id={data.user_id}")
+    else:
+        if data.user_id:
+            # Nuovo ciclo: le stelle di quello chiuso vanno in cassaforte, e la data di
+            # inizio riparte da adesso. Tetto anti-errore: 30 giorni x 3 azioni + 25 di bonus.
+            closing = max(0, min(data.closing_stars, 115))
+            update: Dict[str, Any] = {"$set": {"start_date": datetime.utcnow().isoformat() + "Z"}}
+            if closing > 0:
+                update["$inc"] = {"banked_stars": closing, "cycles": 1}
+            await db.piano_state.update_one({"user_id": data.user_id}, update, upsert=True)
+        delete_result = await db.piano_tasks.delete_many(query)
+        print(f"PIANO_TASKS_DELETED: {delete_result.deleted_count} tasks removed for user_id={data.user_id}")
+
     for task in tasks:
         await db.piano_tasks.insert_one(task.dict())
     print(f"PIANO_TASKS_CREATED: {len(tasks)} new tasks for user_id={data.user_id}")
 
     return result
+
+@api_router.get("/piano/state")
+async def get_piano_state(user_id: str):
+    """Data di inizio del ciclo in corso e cassaforte delle stelle (cicli chiusi)."""
+    state = await db.piano_state.find_one({"user_id": user_id}) or {}
+    return {
+        "start_date": state.get("start_date"),
+        "banked_stars": state.get("banked_stars", 0),
+        "cycles": state.get("cycles", 0),
+    }
+
+@api_router.post("/piano/start")
+async def set_piano_start(data: PianoStart):
+    """Registra la data di inizio del ciclo solo se non c'e' gia' (utenti che avevano un
+    piano prima dell'introduzione di questo stato, o migrazione dal dispositivo)."""
+    try:
+        datetime.fromisoformat(data.start_date.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Data di inizio non valida")
+    state = await db.piano_state.find_one({"user_id": data.user_id})
+    if state and state.get("start_date"):
+        return {"start_date": state["start_date"]}
+    await db.piano_state.update_one(
+        {"user_id": data.user_id}, {"$set": {"start_date": data.start_date}}, upsert=True
+    )
+    return {"start_date": data.start_date}
 
 @api_router.delete("/reset")
 async def reset_user_data(user_id: Optional[str] = None):
@@ -446,6 +503,7 @@ async def reset_user_data(user_id: Optional[str] = None):
     screenings_deleted = await db.screenings.delete_many(query)
     piano_deleted = await db.piano_tasks.delete_many(query)
     checkins_deleted = await db.checkins.delete_many(query)
+    await db.piano_state.delete_many(query)
     print(f"RESET_USER_DATA: user_id={user_id} screenings={screenings_deleted.deleted_count} "
           f"piano_tasks={piano_deleted.deleted_count} checkins={checkins_deleted.deleted_count}")
     return {

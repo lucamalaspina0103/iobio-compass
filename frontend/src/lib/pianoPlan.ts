@@ -364,6 +364,43 @@ export const getCurrentDay = async (): Promise<number> => {
   }
 };
 
+// Giorni trascorsi dall'inizio del ciclo, SENZA il limite di 30 (serve a capire se il
+// ciclo e' finito). null se il ciclo non e' ancora iniziato.
+export const getElapsedDays = async (): Promise<number | null> => {
+  try {
+    const startDateStr = await AsyncStorage.getItem(PIANO_START_DATE_KEY);
+    if (!startDateStr) return null;
+    const diffTime = new Date().getTime() - new Date(startDateStr).getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  } catch (error) {
+    console.error('Error reading elapsed days:', error);
+    return null;
+  }
+};
+
+export const setPianoStartDate = async (iso: string): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(PIANO_START_DATE_KEY, iso);
+  } catch (error) {
+    console.error('Error saving piano start date:', error);
+  }
+};
+
+// Piano "a scorrimento": tiene i giorni gia' vissuti (con quello che hai spuntato) e
+// rigenera solo i giorni successivi sulle nuove aree deboli. Cosi' rifare lo screening
+// a meta' percorso non azzera niente di quanto guadagnato.
+export const slideLocalPlan = (
+  existing: PianoTask[],
+  screeningResult: ScreeningResultForPlan | null,
+  keepUntilDay: number
+): PianoTask[] => {
+  const fresh = generateLocalPlan(screeningResult);
+  return [
+    ...existing.filter(t => t.day <= keepUntilDay),
+    ...fresh.filter(t => t.day > keepUntilDay),
+  ];
+};
+
 // ===== Modalita' Guest: piano locale =====
 
 export const loadLocalTasks = async (
@@ -400,6 +437,49 @@ export const fetchBackendTasks = async (userId: string): Promise<PianoTask[]> =>
   const response = await fetch(`${API_URL}/api/piano/tasks?user_id=${userId}`);
   if (!response.ok) throw new Error('Impossibile caricare il piano dal server');
   return response.json();
+};
+
+export interface BackendPianoState {
+  start_date: string | null;
+  banked_stars: number;
+  cycles: number;
+}
+
+export const fetchBackendState = async (userId: string): Promise<BackendPianoState | null> => {
+  try {
+    const response = await fetch(`${API_URL}/api/piano/state?user_id=${encodeURIComponent(userId)}`);
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.error('Error loading piano state:', error);
+    return null;
+  }
+};
+
+// Per gli utenti registrati la data di inizio ciclo vive sul server (cosi' sopravvive a
+// logout e cambio dispositivo). Se il server non ce l'ha ancora (piani nati prima di
+// questa funzione) gli passiamo quella locale; se ce l'ha, vince quella del server.
+export const syncStartDateFromServer = async (userId: string): Promise<BackendPianoState | null> => {
+  const state = await fetchBackendState(userId);
+  if (!state) return null;
+  if (state.start_date) {
+    await setPianoStartDate(state.start_date);
+    return state;
+  }
+  try {
+    await getCurrentDay(); // crea la data locale se manca
+    const local = await AsyncStorage.getItem(PIANO_START_DATE_KEY);
+    if (local) {
+      await fetch(`${API_URL}/api/piano/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, start_date: local }),
+      });
+    }
+  } catch (error) {
+    console.error('Error pushing piano start date:', error);
+  }
+  return state;
 };
 
 export const completeBackendTask = async (taskId: string, completed: boolean): Promise<void> => {

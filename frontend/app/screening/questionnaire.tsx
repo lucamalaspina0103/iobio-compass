@@ -5,6 +5,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  PianoTask,
+  fetchBackendTasks,
+  getElapsedDays,
+  syncStartDateFromServer,
+} from '../../src/lib/pianoPlan';
+import {
+  RescreenPlan,
+  planRescreen,
+  applyLocalRescreen,
+  loadLocalRawTasks,
+} from '../../src/lib/rescreen';
+import { saveCelebrated } from '../../src/lib/rewards';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -315,6 +328,23 @@ function QuestionnaireScreen() {
       // Store locally first (safety)
       await AsyncStorage.setItem('iobio_latest_results', JSON.stringify(localResults));
       
+      // Piano "a scorrimento": prima di inviare decidiamo cosa tenere del piano attuale
+      // (il server cancella e rigenera i giorni futuri, quindi serve saperlo prima).
+      const registeredId = !isGuest && user?.id ? user.id : null;
+      let plan: RescreenPlan = { keepUntilDay: 0, closingStars: 0 };
+      let existingTasks: PianoTask[] = [];
+      try {
+        if (registeredId) {
+          await syncStartDateFromServer(registeredId);
+          existingTasks = await fetchBackendTasks(registeredId);
+        } else {
+          existingTasks = await loadLocalRawTasks();
+        }
+        plan = planRescreen(existingTasks, await getElapsedDays());
+      } catch (planError) {
+        console.warn('Impossibile leggere il piano attuale, si riparte da zero:', planError);
+      }
+
       // Try API submit
       try {
         const formattedAnswers = QUESTIONS.map((question, index) => ({
@@ -332,6 +362,8 @@ function QuestionnaireScreen() {
           body: JSON.stringify({
             user_id: isGuest ? null : user?.id,
             answers: formattedAnswers,
+            keep_until_day: plan.keepUntilDay,
+            closing_stars: plan.closingStars,
           }),
         });
 
@@ -341,14 +373,25 @@ function QuestionnaireScreen() {
           // Use API data if available
           setScreeningResult(data);
           await AsyncStorage.setItem('iobio_latest_results', JSON.stringify(data));
+          if (registeredId) {
+            // Il server ha gia' aggiornato il piano; qui riallineiamo solo la data di inizio.
+            if (plan.keepUntilDay === 0) {
+              await syncStartDateFromServer(registeredId);
+              await saveCelebrated([]);
+            }
+          } else {
+            await applyLocalRescreen(data, plan, existingTasks);
+          }
         } else {
           console.warn('API returned error, using local results');
           setScreeningResult(localResults);
+          if (!registeredId) await applyLocalRescreen(localResults, plan, existingTasks);
         }
       } catch (apiError) {
         console.error('API submit failed:', apiError);
         // Use local results
         setScreeningResult(localResults);
+        if (!registeredId) await applyLocalRescreen(localResults, plan, existingTasks);
         try {
           alert('Errore salvataggio: continuo in locale');
         } catch (alertError) {

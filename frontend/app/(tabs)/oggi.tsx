@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppContext } from '../../src/contexts/AppContext';
 import {
@@ -15,7 +15,9 @@ import {
   fetchBackendTasks,
   completeBackendTask,
   getWeeklySummary,
+  syncStartDateFromServer,
 } from '../../src/lib/pianoPlan';
+import { getBankedStars } from '../../src/lib/rescreen';
 import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
 import {
   computeStreaks,
@@ -49,18 +51,25 @@ export default function OggiScreen() {
   const [celebrated, setCelebrated] = useState<number[]>([]);
   const [celebratedLoaded, setCelebratedLoaded] = useState(false);
   const [celebration, setCelebration] = useState<number | null>(null);
+  const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
 
-  useEffect(() => {
-    // Aspetta che AppContext finisca di caricare user/isGuest da storage, altrimenti
-    // interroghiamo la fonte sbagliata (bug gia' risolto in precedenza, da non perdere).
-    if (!isBootstrapped) return;
-    loadTasks();
-    loadTodaysCheckin();
-    loadCelebrated().then(list => {
-      setCelebrated(list);
-      setCelebratedLoaded(true);
-    });
-  }, [isBootstrapped]);
+  // Ricarica ogni volta che la schermata torna in primo piano (es. dopo aver rifatto lo
+  // screening il piano puo' essere cambiato). Aspetta che AppContext finisca di caricare
+  // user/isGuest da storage, altrimenti interroghiamo la fonte sbagliata (bug gia'
+  // risolto in precedenza, da non perdere).
+  useFocusEffect(
+    useCallback(() => {
+      if (!isBootstrapped) return;
+      // Il festeggiamento resta bloccato finche' piano e traguardi festeggiati non sono
+      // entrambi aggiornati: altrimenti un piano vecchio potrebbe rifar festeggiare.
+      setCelebratedLoaded(false);
+      loadTodaysCheckin();
+      Promise.all([loadTasks(), loadCelebrated()]).then(([, list]) => {
+        setCelebrated(list);
+        setCelebratedLoaded(true);
+      });
+    }, [isBootstrapped, isGuest, user?.id, screeningResult])
+  );
 
   // Festeggia un nuovo traguardo di serie (una sola volta per traguardo), ma mai mentre
   // e' aperta un'altra finestra (check-in / riflessione).
@@ -97,6 +106,16 @@ export default function OggiScreen() {
 
   const loadTasks = async () => {
     try {
+      // Utenti registrati: data di inizio ciclo e cassaforte stelle vivono sul server
+      let banked = 0;
+      if (!isGuest && user?.id) {
+        const state = await syncStartDateFromServer(user.id);
+        banked = state?.banked_stars ?? 0;
+      } else {
+        banked = await getBankedStars(true);
+      }
+      setBankedStars(banked);
+
       const day = await getCurrentDay();
       setCurrentDay(day);
 
@@ -204,7 +223,7 @@ export default function OggiScreen() {
             {allTasks.length > 0 && (
               <View style={styles.starChip}>
                 <Ionicons name="star" size={18} color="#FFB300" />
-                <Text style={styles.starChipText}>{stars.total}</Text>
+                <Text style={styles.starChipText}>{stars.total + bankedStars}</Text>
               </View>
             )}
           </View>
