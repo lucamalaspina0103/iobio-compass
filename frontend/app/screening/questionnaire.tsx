@@ -18,6 +18,7 @@ import {
   loadLocalRawTasks,
 } from '../../src/lib/rescreen';
 import { saveCelebrated } from '../../src/lib/rewards';
+import { resetDismissed } from '../../src/lib/cycleNotices';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -378,6 +379,7 @@ function QuestionnaireScreen() {
             if (plan.keepUntilDay === 0) {
               await syncStartDateFromServer(registeredId);
               await saveCelebrated([]);
+              await resetDismissed();
             }
           } else {
             await applyLocalRescreen(data, plan, existingTasks);

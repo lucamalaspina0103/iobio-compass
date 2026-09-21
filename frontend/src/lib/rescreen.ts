@@ -17,6 +17,7 @@ import {
   slideLocalPlan,
 } from './pianoPlan';
 import { computeStreaks, computeStars, saveCelebrated } from './rewards';
+import { resetDismissed } from './cycleNotices';
 
 const STARS_VAULT_KEY = 'stars_vault';
 
@@ -107,6 +108,7 @@ export const applyLocalRescreen = async (
 export const startNewCycleLocally = async (): Promise<void> => {
   await setPianoStartDate(new Date().toISOString());
   await saveCelebrated([]);
+  await resetDismissed();
 };
 
 export const loadLocalRawTasks = async (): Promise<PianoTask[]> => {

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getElapsedDays } from '../../src/lib/pianoPlan';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -14,6 +15,7 @@ export default function ProfiloScreen() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showGuestGateModal, setShowGuestGateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -71,7 +73,17 @@ export default function ProfiloScreen() {
     router.push('/salva-progressi');
   };
 
-  const handleRetakeScreening = () => {
+  // Un Guest puo' rifare lo screening durante il primo mese (il piano scorre senza perdere
+  // niente); a ciclo finito, per aprire il successivo serve un account. Il piano in corso
+  // non viene mai toccato.
+  const handleRetakeScreening = async () => {
+    if (isGuest) {
+      const elapsed = await getElapsedDays();
+      if (elapsed !== null && elapsed > 30) {
+        setShowGuestGateModal(true);
+        return;
+      }
+    }
     setShowRetakeModal(true);
   };
 
@@ -296,6 +308,40 @@ export default function ProfiloScreen() {
                 onPress={confirmRetakeScreening}
               >
                 <Text style={styles.modalButtonConfirmText}>Continua</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showGuestGateModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowGuestGateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="ribbon" size={48} color="#FF9800" />
+            </View>
+            <Text style={styles.modalTitle}>Per il prossimo ciclo serve un account</Text>
+            <Text style={styles.modalText}>
+              Hai completato il tuo primo mese, complimenti! Per iniziare il ciclo successivo e tenere
+              al sicuro le tue stelle, crea un account gratuito: porti con te tutto il percorso.
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable style={styles.modalButtonCancel} onPress={() => setShowGuestGateModal(false)}>
+                <Text style={styles.modalButtonCancelText}>Più tardi</Text>
+              </Pressable>
+              <Pressable
+                style={styles.modalButtonConfirm}
+                onPress={() => {
+                  setShowGuestGateModal(false);
+                  router.push('/salva-progressi');
+                }}
+              >
+                <Text style={styles.modalButtonConfirmText}>Crea account</Text>
               </Pressable>
             </View>
           </View>

@@ -16,7 +16,15 @@ import {
   completeBackendTask,
   getWeeklySummary,
   syncStartDateFromServer,
+  getElapsedDays,
 } from '../../src/lib/pianoPlan';
+import {
+  CycleNoticeKind,
+  getCycleNotice,
+  loadDismissed,
+  dismissNotice,
+} from '../../src/lib/cycleNotices';
+import CycleNotice from '../../src/components/CycleNotice';
 import { getBankedStars } from '../../src/lib/rescreen';
 import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
 import {
@@ -52,6 +60,8 @@ export default function OggiScreen() {
   const [celebratedLoaded, setCelebratedLoaded] = useState(false);
   const [celebration, setCelebration] = useState<number | null>(null);
   const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
+  const [elapsedDays, setElapsedDays] = useState<number | null>(null);
+  const [dismissedNotices, setDismissedNotices] = useState<Awaited<ReturnType<typeof loadDismissed>>>([]);
 
   // Ricarica ogni volta che la schermata torna in primo piano (es. dopo aver rifatto lo
   // screening il piano puo' essere cambiato). Aspetta che AppContext finisca di caricare
@@ -118,6 +128,8 @@ export default function OggiScreen() {
 
       const day = await getCurrentDay();
       setCurrentDay(day);
+      setElapsedDays(await getElapsedDays());
+      setDismissedNotices(await loadDismissed());
 
       if (isGuest || !user?.id) {
         const local = await loadLocalTasks(screeningResult);
@@ -205,6 +217,20 @@ export default function OggiScreen() {
   const stars = computeStars(allTasks, streaks.best, currentDay);
   const dayStars = getDayStars(todayTasks);
 
+  // Avvisi non bloccanti: Guest (salva i progressi) e fine ciclo
+  const isGuestMode = isGuest || !user?.id;
+  const notice: CycleNoticeKind | null =
+    allTasks.length > 0 ? getCycleNotice(isGuestMode, currentDay, elapsedDays, dismissedNotices) : null;
+
+  const handleNoticePress = () => {
+    router.push(notice === 'registered_ended' ? '/screening/profile' : '/salva-progressi');
+  };
+
+  const handleNoticeDismiss = async () => {
+    if (!notice) return;
+    setDismissedNotices(await dismissNotice(notice));
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -236,6 +262,15 @@ export default function OggiScreen() {
               </View>
               <Ionicons name="leaf" size={48} color="#7CB342" />
             </View>
+          )}
+
+          {notice && (
+            <CycleNotice
+              kind={notice}
+              currentDay={currentDay}
+              onPress={handleNoticePress}
+              onDismiss={handleNoticeDismiss}
+            />
           )}
 
           {weeklySummary && (
