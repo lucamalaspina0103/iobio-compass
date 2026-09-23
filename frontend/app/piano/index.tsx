@@ -27,6 +27,10 @@ import {
 import { getBankedStars } from '../../src/lib/rescreen';
 import { computeStreaks, computeStars, getDayStars } from '../../src/lib/rewards';
 import StarRow from '../../src/components/StarRow';
+import { getTaskInteractionType, getResourceKind } from '../../src/lib/taskInteraction';
+import { addLocalDiaryEntry, addBackendDiaryEntry } from '../../src/lib/diary';
+import DiaryEntryModal from '../../src/components/DiaryEntryModal';
+import ResourceSuggestionModal from '../../src/components/ResourceSuggestionModal';
 
 export default function PianoScreen() {
   const router = useRouter();
@@ -39,6 +43,8 @@ export default function PianoScreen() {
   const [expandedDays, setExpandedDays] = useState<number[]>([]);
 
   const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
+  const [writeTask, setWriteTask] = useState<PianoTask | null>(null); // task tipo "Scrivi..." in corso
+  const [resourceTask, setResourceTask] = useState<PianoTask | null>(null); // task tipo "Leggi/Ascolta..." in corso
 
   // Carica il piano: locale per i Guest (privato al dispositivo), dal server per
   // gli utenti registrati (condiviso tra dispositivi). Stessa fonte usata da Oggi.
@@ -101,6 +107,40 @@ export default function PianoScreen() {
         setTasks(tasks); // rollback in caso di errore di rete
       }
     }
+  };
+
+  // Alcuni task chiedono di scrivere o di leggere/ascoltare qualcosa senza dire cosa:
+  // invece di una semplice spunta, offriamo un modo di farlo subito, dentro l'app (solo
+  // quando si sta completando il task - togliere la spunta resta un tocco semplice).
+  const handleTaskPress = (task: PianoTask) => {
+    if (task.day > currentDay) return; // i giorni futuri non si spuntano in anticipo
+    if (task.completed) {
+      toggleTaskCompletion(task.id);
+      return;
+    }
+    const type = getTaskInteractionType(task.task);
+    if (type === 'write') setWriteTask(task);
+    else if (type === 'resource') setResourceTask(task);
+    else toggleTaskCompletion(task.id);
+  };
+
+  const saveToDiary = async (text: string, area?: string, taskId?: string) => {
+    try {
+      if (isGuest || !user?.id) {
+        await addLocalDiaryEntry(text, area, taskId);
+      } else {
+        await addBackendDiaryEntry(user.id, text, area, taskId);
+      }
+    } catch (error) {
+      console.error('Error saving diary entry:', error);
+    }
+  };
+
+  const handleSaveWriteTask = async (text: string) => {
+    if (!writeTask) return;
+    await saveToDiary(text, writeTask.area, writeTask.id);
+    await toggleTaskCompletion(writeTask.id);
+    setWriteTask(null);
   };
 
   const toggleDayExpansion = (day: number) => {
@@ -226,11 +266,12 @@ export default function PianoScreen() {
 
             {todayTasks.map(task => {
               const info = getAreaInfo(task.area);
+              const interaction = getTaskInteractionType(task.task);
               return (
                 <Pressable
                   key={task.id}
                   style={[styles.optionRow, task.completed && styles.optionRowCompleted]}
-                  onPress={() => toggleTaskCompletion(task.id)}
+                  onPress={() => handleTaskPress(task)}
                 >
                   <Ionicons
                     name={task.completed ? 'checkmark-circle' : 'ellipse-outline'}
@@ -245,6 +286,13 @@ export default function PianoScreen() {
                       {task.task}
                     </Text>
                   </View>
+                  {!task.completed && interaction && (
+                    <Ionicons
+                      name={interaction === 'write' ? 'create-outline' : 'bulb-outline'}
+                      size={18}
+                      color="rgba(255,255,255,0.9)"
+                    />
+                  )}
                 </Pressable>
               );
             })}
@@ -324,11 +372,12 @@ export default function PianoScreen() {
                   <View style={styles.dayContent}>
                     {dayTasks.map(task => {
                       const info = getAreaInfo(task.area);
+                      const interaction = getTaskInteractionType(task.task);
                       return (
                         <Pressable
                           key={task.id}
                           style={styles.taskItem}
-                          onPress={() => toggleTaskCompletion(task.id)}
+                          onPress={() => handleTaskPress(task)}
                         >
                           <Ionicons
                             name={task.completed ? "checkbox" : "square-outline"}
@@ -346,6 +395,13 @@ export default function PianoScreen() {
                               {task.task}
                             </Text>
                           </View>
+                          {!task.completed && interaction && day <= currentDay && (
+                            <Ionicons
+                              name={interaction === 'write' ? 'create-outline' : 'bulb-outline'}
+                              size={16}
+                              color={info.color}
+                            />
+                          )}
                         </Pressable>
                       );
                     })}
@@ -371,6 +427,26 @@ export default function PianoScreen() {
           <Text style={styles.buildLabel}>Build: PIANO-UNIFICATO-001</Text>
         </View>
       </ScrollView>
+
+      <DiaryEntryModal
+        visible={!!writeTask}
+        prompt={writeTask?.task}
+        onSave={handleSaveWriteTask}
+        onCancel={() => setWriteTask(null)}
+      />
+
+      {resourceTask && (
+        <ResourceSuggestionModal
+          visible={!!resourceTask}
+          taskText={resourceTask.task}
+          area={resourceTask.area}
+          kind={getResourceKind(resourceTask.task)}
+          seed={resourceTask.day}
+          onComplete={() => toggleTaskCompletion(resourceTask.id)}
+          onClose={() => setResourceTask(null)}
+          onSaveToDiary={(text) => saveToDiary(text, resourceTask.area, resourceTask.id)}
+        />
+      )}
     </SafeAreaView>
   );
 }

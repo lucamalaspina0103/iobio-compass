@@ -22,7 +22,7 @@ const MIN_PASSWORD_LENGTH = 8;
 const BENEFITS = [
   'Il tuo piano di 30 giorni e le azioni già fatte',
   'Le tue stelle e la serie di giorni',
-  'Lo storico dei tuoi screening',
+  'Lo storico dei tuoi screening e le voci del diario',
   'Li ritrovi anche se cambi telefono',
 ];
 

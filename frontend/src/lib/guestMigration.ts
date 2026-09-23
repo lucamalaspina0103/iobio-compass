@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PIANO_START_DATE_KEY, PIANO_TASKS_KEY } from './pianoPlan';
 import { loadLocalScreeningHistory } from './screeningHistory';
 import { loadLocalRawTasks, loadLocalVault } from './rescreen';
+import { loadLocalDiary, DIARY_KEY } from './diary';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const STARS_VAULT_KEY = 'stars_vault';
@@ -68,12 +69,20 @@ export const buildGuestData = async () => {
   const vault = await loadLocalVault();
   const startDate = await AsyncStorage.getItem(PIANO_START_DATE_KEY);
 
+  const diary = (await loadLocalDiary()).map(d => ({
+    text: d.text,
+    area: d.area,
+    task_id: d.task_id,
+    date: d.date,
+  }));
+
   return {
     screenings,
     tasks,
     start_date: startDate,
     banked_stars: vault.banked,
     cycles: vault.cycles,
+    diary,
   };
 };
 
@@ -118,7 +127,7 @@ export const registerWithGuestData = async (
 // della cassaforte, che altrimenti resterebbero orfane (l'app registrata legge dal server).
 export const cleanupAfterMigration = async (): Promise<void> => {
   try {
-    await AsyncStorage.multiRemove([PIANO_TASKS_KEY, STARS_VAULT_KEY]);
+    await AsyncStorage.multiRemove([PIANO_TASKS_KEY, STARS_VAULT_KEY, DIARY_KEY]);
   } catch (error) {
     console.error('Error cleaning local data after migration:', error);
   }

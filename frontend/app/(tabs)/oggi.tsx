@@ -40,6 +40,10 @@ import {
 } from '../../src/lib/rewards';
 import { MILESTONES } from '../../src/lib/pianoPlan';
 import StarRow from '../../src/components/StarRow';
+import { getTaskInteractionType, getResourceKind } from '../../src/lib/taskInteraction';
+import { addLocalDiaryEntry, addBackendDiaryEntry } from '../../src/lib/diary';
+import DiaryEntryModal from '../../src/components/DiaryEntryModal';
+import ResourceSuggestionModal from '../../src/components/ResourceSuggestionModal';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const CHECKIN_TODAY_KEY = 'checkin_today';
@@ -62,6 +66,8 @@ export default function OggiScreen() {
   const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
   const [elapsedDays, setElapsedDays] = useState<number | null>(null);
   const [dismissedNotices, setDismissedNotices] = useState<Awaited<ReturnType<typeof loadDismissed>>>([]);
+  const [writeTask, setWriteTask] = useState<PianoTask | null>(null); // task tipo "Scrivi..." in corso
+  const [resourceTask, setResourceTask] = useState<PianoTask | null>(null); // task tipo "Leggi/Ascolta..." in corso
 
   // Ricarica ogni volta che la schermata torna in primo piano (es. dopo aver rifatto lo
   // screening il piano puo' essere cambiato). Aspetta che AppContext finisca di caricare
@@ -159,6 +165,39 @@ export default function OggiScreen() {
       setAllTasks(allTasks); // rollback
       Alert.alert('Errore', 'Impossibile aggiornare il task');
     }
+  };
+
+  // Alcuni task chiedono di scrivere o di leggere/ascoltare qualcosa senza dire cosa:
+  // invece di una semplice spunta, offriamo un modo di farlo subito, dentro l'app (solo
+  // quando si sta completando il task - togliere la spunta resta un tocco semplice).
+  const handleTaskPress = (task: PianoTask) => {
+    if (task.completed) {
+      toggleTask(task.id, task.completed);
+      return;
+    }
+    const type = getTaskInteractionType(task.task);
+    if (type === 'write') setWriteTask(task);
+    else if (type === 'resource') setResourceTask(task);
+    else toggleTask(task.id, task.completed);
+  };
+
+  const saveToDiary = async (text: string, area?: string, taskId?: string) => {
+    try {
+      if (isGuest || !user?.id) {
+        await addLocalDiaryEntry(text, area, taskId);
+      } else {
+        await addBackendDiaryEntry(user.id, text, area, taskId);
+      }
+    } catch (error) {
+      Alert.alert('Errore', 'Impossibile salvare nel diario');
+    }
+  };
+
+  const handleSaveWriteTask = async (text: string) => {
+    if (!writeTask) return;
+    await saveToDiary(text, writeTask.area, writeTask.id);
+    await toggleTask(writeTask.id, false);
+    setWriteTask(null);
   };
 
   const submitCheckin = async () => {
@@ -349,6 +388,18 @@ export default function OggiScreen() {
             <Ionicons name="chevron-forward" size={24} color="#7CB342" />
           </Pressable>
 
+          <Pressable
+            style={styles.coachButton}
+            onPress={() => router.push('/diario')}
+          >
+            <Ionicons name="book" size={32} color="#7CB342" />
+            <View style={styles.checkinContent}>
+              <Text style={styles.checkinTitle}>Il tuo diario</Text>
+              <Text style={styles.checkinSubtitle}>Scrivi liberamente o rivedi le tue voci</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+          </Pressable>
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
             {todayTasks.length > 0 ? (
@@ -376,11 +427,12 @@ export default function OggiScreen() {
 
                 {todayTasks.map((task) => {
                   const info = getAreaInfo(task.area);
+                  const interaction = getTaskInteractionType(task.task);
                   return (
                     <Pressable
                       key={task.id}
                       style={styles.taskItem}
-                      onPress={() => toggleTask(task.id, task.completed)}
+                      onPress={() => handleTaskPress(task)}
                     >
                       <View style={[
                         styles.checkbox,
@@ -397,6 +449,13 @@ export default function OggiScreen() {
                           {info.name}{task.optional ? ' · extra' : ''}
                         </Text>
                       </View>
+                      {!task.completed && interaction && (
+                        <Ionicons
+                          name={interaction === 'write' ? 'create-outline' : 'bulb-outline'}
+                          size={18}
+                          color={info.color}
+                        />
+                      )}
                     </Pressable>
                   );
                 })}
@@ -593,6 +652,26 @@ export default function OggiScreen() {
           )}
         </View>
       </Modal>
+
+      <DiaryEntryModal
+        visible={!!writeTask}
+        prompt={writeTask?.task}
+        onSave={handleSaveWriteTask}
+        onCancel={() => setWriteTask(null)}
+      />
+
+      {resourceTask && (
+        <ResourceSuggestionModal
+          visible={!!resourceTask}
+          taskText={resourceTask.task}
+          area={resourceTask.area}
+          kind={getResourceKind(resourceTask.task)}
+          seed={resourceTask.day}
+          onComplete={() => toggleTask(resourceTask.id, false)}
+          onClose={() => setResourceTask(null)}
+          onSaveToDiary={(text) => saveToDiary(text, resourceTask.area, resourceTask.id)}
+        />
+      )}
     </SafeAreaView>
   );
 }

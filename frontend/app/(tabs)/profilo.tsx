@@ -185,7 +185,7 @@ export default function ProfiloScreen() {
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
-            <Pressable 
+            <Pressable
               style={styles.menuItem}
               onPress={() => router.push('/(tabs)/mappa')}
             >
@@ -193,6 +193,17 @@ export default function ProfiloScreen() {
                 <Ionicons name="trending-up" size={24} color="#7CB342" />
               </View>
               <Text style={styles.menuText}>Progressi</Text>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </Pressable>
+
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => router.push('/diario')}
+            >
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="book" size={24} color="#7CB342" />
+              </View>
+              <Text style={styles.menuText}>Il tuo diario</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
           </View>
