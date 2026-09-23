@@ -40,10 +40,17 @@ api_router = APIRouter(prefix="/api")
 
 # ===== MODELS =====
 
+# Stesse opzioni del frontend (screening/profile.tsx, onboarding/auth.tsx, salva-progressi.tsx)
+ALLOWED_AGE_RANGES = {'18-24', '25-34', '35-44', '45-54', '55+', 'preferisco-non-dirlo'}
+ALLOWED_GENDERS = {'donna', 'uomo', 'non-binario', 'preferisco-non-dirlo'}
+
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
     password_hash: str
+    age_range: Optional[str] = None
+    gender: Optional[str] = None
+    privacy_accepted_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class GuestScreening(BaseModel):
@@ -70,6 +77,12 @@ class GuestData(BaseModel):
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
+    # Chi crea un account deve dare consenso esplicito e scegliere (anche "preferisco non
+    # dirlo") eta' e genere: dati sempre disponibili per analisi interne, mai obbligo di
+    # rivelare quelli veri. Verificati anche lato server, non solo nel form.
+    privacy_accepted: bool = False
+    age_range: Optional[str] = None
+    gender: Optional[str] = None
     guest_data: Optional[GuestData] = None  # presente quando un Guest salva i suoi progressi
 
 class UserLogin(BaseModel):
@@ -427,7 +440,7 @@ def parse_client_date(value: Optional[str]) -> Optional[datetime]:
         parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
     return parsed
 
-async def send_registration_alert(email: str, migrated_from_guest: bool):
+async def send_registration_alert(email: str, migrated_from_guest: bool, age_range: str, gender: str):
     """Avvisa il gestore dell'app via email a ogni nuova registrazione. Non deve MAI far
     fallire la registrazione: qualunque errore viene solo loggato."""
     if not RESEND_API_KEY or not ADMIN_ALERT_EMAIL:
@@ -442,7 +455,11 @@ async def send_registration_alert(email: str, migrated_from_guest: bool):
                     "from": "IOBIO Compass <onboarding@resend.dev>",
                     "to": [ADMIN_ALERT_EMAIL],
                     "subject": "Nuova registrazione su IOBIO Compass",
-                    "text": f"Nuovo utente registrato: {email}{origin}\n\n{datetime.utcnow().isoformat()}Z",
+                    "text": (
+                        f"Nuovo utente registrato: {email}{origin}\n"
+                        f"Età: {age_range} · Genere: {gender}\n\n"
+                        f"{datetime.utcnow().isoformat()}Z"
+                    ),
                 },
             )
             if r.status_code >= 400:
@@ -509,10 +526,23 @@ async def register(user_data: UserRegister):
     if existing:
         raise HTTPException(status_code=400, detail="Email già registrata")
 
+    # Consenso e profilo verificati anche qui, non solo nel form: chi crea un account deve
+    # accettare la privacy ed esprimere una scelta su eta'/genere (va bene anche "preferisco
+    # non dirlo", ma deve essere una scelta attiva, cosi' il dato e' sempre disponibile).
+    if not user_data.privacy_accepted:
+        raise HTTPException(status_code=400, detail="Devi accettare la privacy policy per continuare")
+    if user_data.age_range not in ALLOWED_AGE_RANGES:
+        raise HTTPException(status_code=400, detail="Seleziona la tua fascia d'età")
+    if user_data.gender not in ALLOWED_GENDERS:
+        raise HTTPException(status_code=400, detail="Seleziona il tuo genere")
+
     # Create user
     user = User(
         email=user_data.email,
-        password_hash=hash_password(user_data.password)
+        password_hash=hash_password(user_data.password),
+        age_range=user_data.age_range,
+        gender=user_data.gender,
+        privacy_accepted_at=datetime.utcnow(),
     )
 
     # Un Guest che salva i progressi porta con se' i suoi dati. Si trasferiscono PRIMA di
@@ -530,7 +560,12 @@ async def register(user_data: UserRegister):
             raise HTTPException(status_code=500, detail="Non siamo riusciti a trasferire i tuoi progressi. Riprova.")
 
     await db.users.insert_one(user.dict())
-    await send_registration_alert(user.email, migrated_from_guest=bool(user_data.guest_data))
+    await send_registration_alert(
+        user.email,
+        migrated_from_guest=bool(user_data.guest_data),
+        age_range=user.age_range,
+        gender=user.gender,
+    )
 
     return UserResponse(id=user.id, email=user.email)
 
