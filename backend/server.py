@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 import bcrypt
 import random
+import httpx
 from anthropic import AsyncAnthropic
 
 ROOT_DIR = Path(__file__).parent
@@ -25,6 +26,11 @@ db = client[os.environ['DB_NAME']]
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001')
 anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+
+# Avviso email al gestore dell'app a ogni nuova registrazione (facoltativo: se la chiave
+# manca la registrazione funziona comunque, semplicemente non parte nessuna email)
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+ADMIN_ALERT_EMAIL = os.environ.get('ADMIN_ALERT_EMAIL')
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -421,6 +427,29 @@ def parse_client_date(value: Optional[str]) -> Optional[datetime]:
         parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
     return parsed
 
+async def send_registration_alert(email: str, migrated_from_guest: bool):
+    """Avvisa il gestore dell'app via email a ogni nuova registrazione. Non deve MAI far
+    fallire la registrazione: qualunque errore viene solo loggato."""
+    if not RESEND_API_KEY or not ADMIN_ALERT_EMAIL:
+        return
+    try:
+        origin = " (arrivato da Guest, con dati migrati)" if migrated_from_guest else ""
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+                json={
+                    "from": "IOBIO Compass <onboarding@resend.dev>",
+                    "to": [ADMIN_ALERT_EMAIL],
+                    "subject": "Nuova registrazione su IOBIO Compass",
+                    "text": f"Nuovo utente registrato: {email}{origin}\n\n{datetime.utcnow().isoformat()}Z",
+                },
+            )
+            if r.status_code >= 400:
+                print(f"REGISTRATION_ALERT_FAILED: status={r.status_code} body={r.text}")
+    except Exception as e:
+        print(f"REGISTRATION_ALERT_FAILED: {e}")
+
 async def delete_user_progress(user_id: str):
     """Cancella tutto cio' che riguarda i progressi di un utente (non l'account)."""
     for collection in (db.screenings, db.piano_tasks, db.checkins, db.piano_state, db.chat_history):
@@ -501,6 +530,7 @@ async def register(user_data: UserRegister):
             raise HTTPException(status_code=500, detail="Non siamo riusciti a trasferire i tuoi progressi. Riprova.")
 
     await db.users.insert_one(user.dict())
+    await send_registration_alert(user.email, migrated_from_guest=bool(user_data.guest_data))
 
     return UserResponse(id=user.id, email=user.email)
 
