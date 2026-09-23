@@ -4,22 +4,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
-
-const AGE_RANGES = [
-  { value: '18-24', label: '18-24 anni' },
-  { value: '25-34', label: '25-34 anni' },
-  { value: '35-44', label: '35-44 anni' },
-  { value: '45-54', label: '45-54 anni' },
-  { value: '55+', label: '55+ anni' },
-  { value: 'preferisco-non-dirlo', label: 'Preferisco non dirlo' },
-];
-
-const GENDERS = [
-  { value: 'donna', label: 'Donna', icon: 'woman' },
-  { value: 'uomo', label: 'Uomo', icon: 'man' },
-  { value: 'non-binario', label: 'Non binario/fluido', icon: 'transgender' },
-  { value: 'preferisco-non-dirlo', label: 'Preferisco non dirlo', icon: 'help-circle' },
-];
+import { AGE_RANGES, GENDERS } from '../../src/lib/profileOptions';
 
 export default function ProfileScreen() {
   const router = useRouter();

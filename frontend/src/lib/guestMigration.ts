@@ -16,6 +16,18 @@ export interface RegisteredUser {
   email: string;
 }
 
+// Profilo eventualmente gia' scelto in precedenza (screening/profile.tsx), usato per
+// pre-selezionare le stesse risposte quando questo Guest ora salva i progressi.
+export const loadLocalProfile = async (): Promise<{ age_range: string; gender: string } | null> => {
+  try {
+    const saved = await AsyncStorage.getItem('iobio_user_profile');
+    return saved ? JSON.parse(saved) : null;
+  } catch (error) {
+    console.error('Error loading local profile:', error);
+    return null;
+  }
+};
+
 export const buildGuestData = async () => {
   const history = await loadLocalScreeningHistory();
   const screenings = history.map(s => ({
@@ -69,7 +81,9 @@ export const buildGuestData = async () => {
 // leggibile dall'utente se qualcosa non va.
 export const registerWithGuestData = async (
   email: string,
-  password: string
+  password: string,
+  ageRange: string,
+  gender: string
 ): Promise<RegisteredUser> => {
   const guestData = await buildGuestData();
 
@@ -78,7 +92,14 @@ export const registerWithGuestData = async (
     response = await fetch(`${API_URL}/api/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, guest_data: guestData }),
+      body: JSON.stringify({
+        email,
+        password,
+        privacy_accepted: true,
+        age_range: ageRange,
+        gender,
+        guest_data: guestData,
+      }),
     });
   } catch (error) {
     throw new Error('Non riesco a collegarmi al server. Controlla la connessione e riprova.');

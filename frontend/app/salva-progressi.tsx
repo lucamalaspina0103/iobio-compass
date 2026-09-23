@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../src/contexts/AppContext';
-import { registerWithGuestData, cleanupAfterMigration } from '../src/lib/guestMigration';
+import { registerWithGuestData, cleanupAfterMigration, loadLocalProfile } from '../src/lib/guestMigration';
+import ProfileFields from '../src/components/ProfileFields';
+import PrivacyConsent from '../src/components/PrivacyConsent';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -29,9 +31,23 @@ export default function SalvaProgressiScreen() {
   const { setUser, setIsGuest } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [ageRange, setAgeRange] = useState('');
+  const [gender, setGender] = useState('');
+  const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  // Se questo Guest ha gia' risposto al profilo rapido prima dello screening, pre-selezioniamo
+  // le stesse scelte invece di chiedergliele due volte.
+  useEffect(() => {
+    loadLocalProfile().then(profile => {
+      if (profile) {
+        setAgeRange(profile.age_range);
+        setGender(profile.gender);
+      }
+    });
+  }, []);
 
   const handleSave = async () => {
     setError(null);
@@ -44,10 +60,18 @@ export default function SalvaProgressiScreen() {
       setError(`La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`);
       return;
     }
+    if (!ageRange || !gender) {
+      setError('Scegli una fascia d\'età e un genere (va bene anche "Preferisco non dirlo").');
+      return;
+    }
+    if (!accepted) {
+      setError('Devi accettare la privacy policy per continuare.');
+      return;
+    }
 
     setLoading(true);
     try {
-      const user = await registerWithGuestData(cleanEmail, password);
+      const user = await registerWithGuestData(cleanEmail, password, ageRange, gender);
       await cleanupAfterMigration();
       await setUser(user);
       await setIsGuest(false);
@@ -132,6 +156,16 @@ export default function SalvaProgressiScreen() {
                 autoComplete="new-password"
               />
             </View>
+
+            <ProfileFields
+              ageRange={ageRange}
+              gender={gender}
+              onChangeAgeRange={setAgeRange}
+              onChangeGender={setGender}
+              required
+            />
+
+            <PrivacyConsent accepted={accepted} onToggle={() => setAccepted(!accepted)} />
 
             {error && (
               <View style={styles.errorBox}>
