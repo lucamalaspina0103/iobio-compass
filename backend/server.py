@@ -66,6 +66,12 @@ class GuestTask(BaseModel):
     completed: bool = False
     optional: bool = False
 
+class GuestDiaryEntry(BaseModel):
+    text: str
+    area: Optional[str] = None
+    task_id: Optional[str] = None
+    date: Optional[str] = None  # ISO 8601
+
 class GuestData(BaseModel):
     """Tutto quello che un Guest ha costruito sul dispositivo, da portare nel nuovo account."""
     screenings: List[GuestScreening] = []
@@ -73,6 +79,7 @@ class GuestData(BaseModel):
     start_date: Optional[str] = None
     banked_stars: int = 0
     cycles: int = 0
+    diary: List[GuestDiaryEntry] = []
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -150,6 +157,34 @@ class PianoTask(BaseModel):
 class TaskComplete(BaseModel):
     task_id: str
     completed: bool
+
+class DiaryEntry(BaseModel):
+    """Voce di diario: scrittura libera o agganciata a un task del piano (es. 'Scrivi 3
+    cose positive'). Solo per utenti registrati - i Guest lo tengono in locale sul
+    dispositivo, come screening e piano."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    text: str
+    area: Optional[str] = None
+    task_id: Optional[str] = None
+    date: datetime = Field(default_factory=datetime.utcnow)
+
+class DiaryAdd(BaseModel):
+    user_id: str
+    text: str
+    area: Optional[str] = None
+    task_id: Optional[str] = None
+
+class DiaryUpdate(BaseModel):
+    entry_id: str
+    text: str
+
+class ResourceSuggestRequest(BaseModel):
+    topic: str
+    kind: str  # 'read' o 'listen'
+
+class ResourceSuggestResponse(BaseModel):
+    suggestion: str
 
 class ChatMessage(BaseModel):
     role: str  # 'user' or 'assistant'
@@ -469,13 +504,13 @@ async def send_registration_alert(email: str, migrated_from_guest: bool, age_ran
 
 async def delete_user_progress(user_id: str):
     """Cancella tutto cio' che riguarda i progressi di un utente (non l'account)."""
-    for collection in (db.screenings, db.piano_tasks, db.checkins, db.piano_state, db.chat_history):
+    for collection in (db.screenings, db.piano_tasks, db.checkins, db.piano_state, db.chat_history, db.diary_entries):
         await collection.delete_many({"user_id": user_id})
 
 async def migrate_guest_data(user_id: str, guest: GuestData):
     """Porta nel nuovo account lo storico screening, il piano con le spunte, la data di
-    inizio e la cassaforte stelle costruiti da Guest sul dispositivo."""
-    if len(guest.screenings) > 100 or len(guest.tasks) > 300:
+    inizio, la cassaforte stelle e il diario costruiti da Guest sul dispositivo."""
+    if len(guest.screenings) > 100 or len(guest.tasks) > 300 or len(guest.diary) > 500:
         raise HTTPException(status_code=400, detail="Dati da trasferire non validi")
 
     screening_docs = [
@@ -506,6 +541,20 @@ async def migrate_guest_data(user_id: str, guest: GuestData):
     ]
     if task_docs:
         await db.piano_tasks.insert_many(task_docs)
+
+    diary_docs = [
+        DiaryEntry(
+            user_id=user_id,
+            text=d.text[:5000],
+            area=d.area,
+            task_id=d.task_id,
+            date=parse_client_date(d.date) or datetime.utcnow(),
+        ).dict()
+        for d in guest.diary
+        if d.text and d.text.strip()
+    ]
+    if diary_docs:
+        await db.diary_entries.insert_many(diary_docs)
 
     state: Dict[str, Any] = {}
     start = parse_client_date(guest.start_date)
@@ -682,6 +731,7 @@ async def reset_user_data(user_id: Optional[str] = None):
     piano_deleted = await db.piano_tasks.delete_many(query)
     checkins_deleted = await db.checkins.delete_many(query)
     await db.piano_state.delete_many(query)
+    await db.diary_entries.delete_many(query)
     print(f"RESET_USER_DATA: user_id={user_id} screenings={screenings_deleted.deleted_count} "
           f"piano_tasks={piano_deleted.deleted_count} checkins={checkins_deleted.deleted_count}")
     return {
@@ -761,6 +811,84 @@ async def complete_task(data: TaskComplete):
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Task non trovato")
     return {"success": True}
+
+@api_router.post("/diary/add")
+async def add_diary_entry(data: DiaryAdd):
+    if not data.text or not data.text.strip():
+        raise HTTPException(status_code=400, detail="Il testo non può essere vuoto")
+    entry = DiaryEntry(
+        user_id=data.user_id,
+        text=data.text.strip()[:5000],
+        area=data.area,
+        task_id=data.task_id,
+    )
+    await db.diary_entries.insert_one(entry.dict())
+    return entry
+
+@api_router.get("/diary/list")
+async def list_diary_entries(user_id: str):
+    entries = await db.diary_entries.find({"user_id": user_id}).sort("date", -1).to_list(500)
+    for e in entries:
+        if "_id" in e:
+            e["_id"] = str(e["_id"])
+    return entries
+
+@api_router.post("/diary/update")
+async def update_diary_entry(data: DiaryUpdate):
+    if not data.text or not data.text.strip():
+        raise HTTPException(status_code=400, detail="Il testo non può essere vuoto")
+    result = await db.diary_entries.update_one(
+        {"id": data.entry_id},
+        {"$set": {"text": data.text.strip()[:5000]}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Voce non trovata")
+    return {"success": True}
+
+@api_router.delete("/diary/{entry_id}")
+async def delete_diary_entry(entry_id: str):
+    result = await db.diary_entries.delete_one({"id": entry_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Voce non trovata")
+    return {"success": True}
+
+@api_router.post("/suggest-resource", response_model=ResourceSuggestResponse)
+async def suggest_resource(data: ResourceSuggestRequest):
+    """Suggerimento di lettura/ascolto su un argomento scelto dalla persona - usato solo
+    quando i consigli gia' pronti nell'app non fanno al caso suo. Risposta breve e pronta
+    da leggere subito, non un compito da fare dopo."""
+    topic = (data.topic or "").strip()[:200]
+    if not topic:
+        raise HTTPException(status_code=400, detail="Scrivi un argomento")
+
+    kind_label = "un breve testo da leggere subito" if data.kind == "read" else "un podcast o una fonte audio reale e conosciuta da ascoltare"
+    fallback = (
+        "Non riesco a darti un suggerimento su misura in questo momento. "
+        "Prova a fare 2 minuti di respirazione lenta mentre ci ripensi: a volte basta quello per ripartire."
+    )
+
+    if anthropic_client is None:
+        return ResourceSuggestResponse(suggestion=fallback)
+
+    try:
+        prompt = (
+            f"Una persona sta seguendo un percorso di benessere olistico e ha un task che le chiede di "
+            f"dedicare qualche minuto a {kind_label}, sul tema '{topic}'. "
+            "Dalle qualcosa di concreto e utilizzabile SUBITO, in italiano, massimo 4 frasi: "
+            "se e' una lettura, scrivi tu stesso un breve pensiero/riflessione ispirante e pronta da leggere ora; "
+            "se e' un ascolto, indica un podcast o una fonte REALE, conosciuta e verificabile (solo il nome dello show, mai un episodio specifico che potresti inventare). "
+            "Nessuna diagnosi medica, nessuna premessa, vai dritto al contenuto."
+        )
+        completion = await anthropic_client.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        suggestion = completion.content[0].text.strip()
+        return ResourceSuggestResponse(suggestion=suggestion or fallback)
+    except Exception as e:
+        logging.error(f"Resource suggestion error: {str(e)}")
+        return ResourceSuggestResponse(suggestion=fallback)
 
 @api_router.post("/chat", response_model=ChatResponse)
 async def chat_with_ai(data: ChatRequest):
