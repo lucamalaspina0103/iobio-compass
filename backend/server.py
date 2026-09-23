@@ -874,14 +874,16 @@ async def suggest_resource(data: ResourceSuggestRequest):
         prompt = (
             f"Una persona sta seguendo un percorso di benessere olistico e ha un task che le chiede di "
             f"dedicare qualche minuto a {kind_label}, sul tema '{topic}'. "
-            "Dalle qualcosa di concreto e utilizzabile SUBITO, in italiano, massimo 4 frasi: "
+            "Dalle SOLO una cosa, concreta e utilizzabile SUBITO: "
             "se e' una lettura, scrivi tu stesso un breve pensiero/riflessione ispirante e pronta da leggere ora; "
-            "se e' un ascolto, indica un podcast o una fonte REALE, conosciuta e verificabile (solo il nome dello show, mai un episodio specifico che potresti inventare). "
-            "Nessuna diagnosi medica, nessuna premessa, vai dritto al contenuto."
+            "se e' un ascolto, indica UN SOLO podcast o fonte audio REALE, conosciuta e verificabile (solo il nome dello show, mai un episodio specifico che potresti inventare), in una frase. "
+            "REGOLE FERREE: rispondi in italiano, massimo 3 frasi brevi, testo semplice senza markdown "
+            "(niente #, niente **, niente elenchi puntati, niente titoli, niente -- separatori), "
+            "nessuna diagnosi medica, nessuna premessa o introduzione, nessuna alternativa proposta oltre a quella richiesta, vai dritto al contenuto."
         )
         completion = await anthropic_client.messages.create(
             model=ANTHROPIC_MODEL,
-            max_tokens=300,
+            max_tokens=200,
             messages=[{"role": "user", "content": prompt}],
         )
         suggestion = completion.content[0].text.strip()
