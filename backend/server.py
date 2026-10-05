@@ -181,7 +181,8 @@ class DiaryUpdate(BaseModel):
 
 class ResourceSuggestRequest(BaseModel):
     topic: str
-    kind: str  # 'read' o 'listen'
+    kind: str  # 'read', 'listen' o 'try'
+    task: Optional[str] = None  # il task del piano da cui nasce la richiesta (contesto per l'IA)
 
 class ResourceSuggestResponse(BaseModel):
     suggestion: str
@@ -861,7 +862,13 @@ async def suggest_resource(data: ResourceSuggestRequest):
     if not topic:
         raise HTTPException(status_code=400, detail="Scrivi un argomento")
 
-    kind_label = "un breve testo da leggere subito" if data.kind == "read" else "un podcast o una fonte audio reale e conosciuta da ascoltare"
+    kind_labels = {
+        "read": "un breve testo da leggere subito",
+        "listen": "un podcast, un brano o una fonte audio reale e conosciuta da ascoltare",
+        "try": "un'idea pratica e concreta da provare subito, realistica, senza ingredienti o attrezzature difficili da trovare",
+    }
+    kind_label = kind_labels.get(data.kind, kind_labels["read"])
+    task_context = f" Il task del piano e': \"{(data.task or '').strip()[:200]}\"." if data.task else ""
     fallback = (
         "Non riesco a darti un suggerimento su misura in questo momento. "
         "Prova a fare 2 minuti di respirazione lenta mentre ci ripensi: a volte basta quello per ripartire."
@@ -873,10 +880,11 @@ async def suggest_resource(data: ResourceSuggestRequest):
     try:
         prompt = (
             f"Una persona sta seguendo un percorso di benessere olistico e ha un task che le chiede di "
-            f"dedicare qualche minuto a {kind_label}, sul tema '{topic}'. "
+            f"dedicare qualche minuto a {kind_label}, sul tema '{topic}'.{task_context} "
             "Dalle SOLO una cosa, concreta e utilizzabile SUBITO: "
             "se e' una lettura, scrivi tu stesso un breve pensiero/riflessione ispirante e pronta da leggere ora; "
-            "se e' un ascolto, indica UN SOLO podcast o fonte audio REALE, conosciuta e verificabile (solo il nome dello show, mai un episodio specifico che potresti inventare), in una frase. "
+            "se e' un ascolto, indica UN SOLO podcast, brano o fonte audio REALE, conosciuta e verificabile (solo il nome, mai un episodio specifico che potresti inventare), in una frase; "
+            "se e' qualcosa da provare, descrivi UNA sola idea semplice e fattibile in pochi minuti. "
             "REGOLE FERREE: rispondi in italiano, massimo 3 frasi brevi, testo semplice senza markdown "
             "(niente #, niente **, niente elenchi puntati, niente titoli, niente -- separatori), "
             "nessuna diagnosi medica, nessuna premessa o introduzione, nessuna alternativa proposta oltre a quella richiesta, vai dritto al contenuto."
@@ -886,7 +894,8 @@ async def suggest_resource(data: ResourceSuggestRequest):
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}],
         )
-        suggestion = completion.content[0].text.strip()
+        # Rete di sicurezza: se l'IA usa comunque simboli di formattazione, li togliamo
+        suggestion = completion.content[0].text.replace("#", "").replace("**", "").replace("*", "").strip()
         return ResourceSuggestResponse(suggestion=suggestion or fallback)
     except Exception as e:
         logging.error(f"Resource suggestion error: {str(e)}")
