@@ -6,14 +6,15 @@ import { CycleNoticeKind, getNoticeCopy } from '../lib/cycleNotices';
 interface CycleNoticeProps {
   kind: CycleNoticeKind;
   currentDay: number;
+  daysSince?: number | null;
   onPress: () => void;
   onDismiss: () => void;
 }
 
 // Card non bloccante su Oggi: invita a salvare i progressi (Guest) o a iniziare il ciclo
 // successivo. Toni: "soft" (verde, discreto) e "strong" (arancione, piu' netto).
-export default function CycleNotice({ kind, currentDay, onPress, onDismiss }: CycleNoticeProps) {
-  const copy = getNoticeCopy(kind, currentDay);
+export default function CycleNotice({ kind, currentDay, daysSince, onPress, onDismiss }: CycleNoticeProps) {
+  const copy = getNoticeCopy(kind, currentDay, daysSince);
   const strong = copy.tone === 'strong';
   const accent = strong ? '#F57C00' : '#7CB342';
 

@@ -16,6 +16,7 @@ export interface ScreeningHistoryEntry {
   area_scores: { [key: string]: number };
   weak_areas: string[];
   date: string;
+  kind?: 'full' | 'quick';
 }
 
 // Aggiunge un nuovo screening allo storico locale (chiamato ogni volta che
@@ -49,4 +50,25 @@ export const fetchBackendScreeningHistory = async (userId: string): Promise<Scre
   const response = await fetch(`${API_URL}/api/screening/history?user_id=${userId}`);
   if (!response.ok) throw new Error('Impossibile caricare lo storico dal server');
   return response.json();
+};
+
+// L'ultimo screening PRIMA di quello appena fatto, per mostrare il confronto ("rispetto
+// all'ultimo controllo"). Prima lo storico del dispositivo; se e' vuoto e c'e' un account,
+// quello sul server. null se e' il primo screening.
+export const loadPreviousScreening = async (
+  currentId: string,
+  isGuest: boolean,
+  userId?: string | null
+): Promise<ScreeningHistoryEntry | null> => {
+  let entries = await loadLocalScreeningHistory();
+  if (entries.filter(e => e.id !== currentId).length === 0 && !isGuest && userId) {
+    try {
+      entries = await fetchBackendScreeningHistory(userId);
+    } catch (error) {
+      console.error('Error loading previous screening:', error);
+    }
+  }
+  const toTime = (d: string) => new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(d) ? d : d + 'Z').getTime();
+  const others = entries.filter(e => e.id !== currentId).sort((a, b) => toTime(b.date) - toTime(a.date));
+  return others[0] || null;
 };

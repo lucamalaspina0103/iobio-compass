@@ -7,7 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type CycleNoticeKind = 'guest_mid' | 'guest_late' | 'guest_ended' | 'registered_ended';
+export type CycleNoticeKind = 'guest_mid' | 'guest_late' | 'guest_ended' | 'registered_ended' | 'check_due';
 
 const DISMISSED_KEY = 'cycle_notice_dismissed';
 
@@ -18,6 +18,7 @@ interface Dismissed {
 
 export const GUEST_MID_DAY = 7;
 export const GUEST_LATE_DAY = 25;
+export const CHECK_SNOOZE_DAYS = 3;
 
 export const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -50,21 +51,37 @@ export const resetDismissed = async (): Promise<void> => {
   }
 };
 
+const daysBetween = (isoDay: string, today: string) =>
+  Math.round((new Date(today).getTime() - new Date(isoDay).getTime()) / (24 * 60 * 60 * 1000));
+
+// Un solo invito alla volta, mai due card insieme. Priorita': fine ciclo, ultimi giorni da
+// ospite, controllo rapido, invito discreto a salvare i progressi.
 export const getCycleNotice = (
   isGuest: boolean,
   currentDay: number,
   elapsedDays: number | null,
-  dismissed: Dismissed[]
+  dismissed: Dismissed[],
+  checkDue: boolean = false
 ): CycleNoticeKind | null => {
   const ended = elapsedDays !== null && elapsedDays > 30;
   if (ended) return isGuest ? 'guest_ended' : 'registered_ended';
-  if (!isGuest) return null;
 
-  if (currentDay >= GUEST_LATE_DAY) {
+  if (isGuest && currentDay >= GUEST_LATE_DAY) {
     // Si puo' rimandare, ma ricompare il giorno dopo
     const seenToday = dismissed.some(d => d.kind === 'guest_late' && d.date === todayStr());
-    return seenToday ? null : 'guest_late';
+    if (!seenToday) return 'guest_late';
   }
+
+  if (checkDue) {
+    // "Piu' tardi" nasconde il controllo per qualche giorno, senza insistere
+    const snoozed = dismissed.some(
+      d => d.kind === 'check_due' && daysBetween(d.date, todayStr()) < CHECK_SNOOZE_DAYS
+    );
+    if (!snoozed) return 'check_due';
+  }
+
+  if (!isGuest) return null;
+  if (currentDay >= GUEST_LATE_DAY) return null;
   if (currentDay >= GUEST_MID_DAY) {
     // Invito discreto: una volta chiuso non ricompare
     return dismissed.some(d => d.kind === 'guest_mid') ? null : 'guest_mid';
@@ -81,8 +98,17 @@ export interface NoticeCopy {
   tone: 'soft' | 'strong';
 }
 
-export const getNoticeCopy = (kind: CycleNoticeKind, currentDay: number): NoticeCopy => {
+export const getNoticeCopy = (kind: CycleNoticeKind, currentDay: number, daysSince?: number | null): NoticeCopy => {
   switch (kind) {
+    case 'check_due':
+      return {
+        title: 'Come stai andando?',
+        text: (daysSince ? `Sono passati ${daysSince} giorni` : "È passato un po' di tempo") + " dall'ultimo controllo. Bastano 2 minuti (7 domande) per vedere i tuoi progressi e aggiornare il piano.",
+        cta: 'Fai il controllo',
+        dismissLabel: 'Più tardi',
+        icon: 'pulse',
+        tone: 'soft',
+      };
     case 'guest_mid':
       return {
         title: 'Stai costruendo qualcosa di tuo',

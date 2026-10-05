@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
@@ -64,7 +64,9 @@ interface Question {
 }
 
 // FIXED 21 QUESTIONS (3 per area × 7 areas)
-const QUESTIONS: Question[] = [
+// Il controllo rapido usa solo la prima domanda di ogni area (id che finisce con _1): sono le
+// domande generali, sulla stessa scala, cosi' l'Indice resta confrontabile nel tempo.
+const ALL_QUESTIONS: Question[] = [
   // ENERGIA (3)
   { id: 'energia_1', area: 'energia', text: 'Come valuti il tuo livello di energia durante il giorno?', scaleType: 'quality', polarity: 'positive', weight: 1 },
   { id: 'energia_2', area: 'energia', text: 'Quanto spesso ti senti stanco/a senza un motivo chiaro?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
@@ -127,13 +129,21 @@ const AREA_INFO: { [key: string]: { name: string; icon: string; color: string } 
 function QuestionnaireScreen() {
   const router = useRouter();
   const { user, isGuest, setScreeningResult } = useAppContext();
+  const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
+  const isQuick = modeParam === 'quick';
+  const QUESTIONS = useMemo(
+    () => (isQuick ? ALL_QUESTIONS.filter(q => q.id.endsWith('_1')) : ALL_QUESTIONS),
+    [isQuick]
+  );
+  // Progressi salvati separati per tipo, cosi' un controllo rapido non riprende un questionario completo lasciato a meta'
+  const PROGRESS_KEY = isQuick ? 'screening_quick_progress' : 'screening_v2_progress';
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<number[]>(Array(21).fill(0));
+  const [answers, setAnswers] = useState<number[]>(Array(QUESTIONS.length).fill(0));
   const [currentAnswer, setCurrentAnswer] = useState(3);
   const [fadeAnim] = useState(new Animated.Value(1));
   const [loading, setLoading] = useState(false);
 
-  const totalQuestions = 21;
+  const totalQuestions = QUESTIONS.length;
   const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
   const timeRemaining = Math.ceil((totalQuestions - currentQuestionIndex - 1) * 0.3);
 
@@ -173,11 +183,14 @@ function QuestionnaireScreen() {
 
   const loadSavedProgress = async () => {
     try {
-      const saved = await AsyncStorage.getItem('screening_v2_progress');
+      const saved = await AsyncStorage.getItem(PROGRESS_KEY);
       if (saved) {
         const { questionIndex, savedAnswers } = JSON.parse(saved);
-        setCurrentQuestionIndex(questionIndex);
-        setAnswers(savedAnswers);
+        // Solo se coerente con questo questionario (stesso numero di domande)
+        if (Array.isArray(savedAnswers) && savedAnswers.length === QUESTIONS.length && questionIndex < QUESTIONS.length) {
+          setCurrentQuestionIndex(questionIndex);
+          setAnswers(savedAnswers);
+        }
       }
     } catch (error) {
       console.error('Error loading progress:', error);
@@ -186,7 +199,7 @@ function QuestionnaireScreen() {
 
   const saveProgress = async (index: number, updatedAnswers: number[]) => {
     try {
-      await AsyncStorage.setItem('screening_v2_progress', JSON.stringify({
+      await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify({
         questionIndex: index,
         savedAnswers: updatedAnswers,
       }));
@@ -228,7 +241,7 @@ function QuestionnaireScreen() {
         fadeAnim.setValue(1);
       });
     } else {
-      // Last question (Q21), submit
+      // Ultima domanda, invio
       submitScreening(updatedAnswers);
     }
   };
@@ -318,6 +331,7 @@ function QuestionnaireScreen() {
           Object.entries(areaAverages).map(([k, v]) => [k, Math.round(v)])
         ),
         weak_areas: weakAreas,
+        kind: (isQuick ? 'quick' : 'full') as 'quick' | 'full',
         date: new Date().toISOString(),
       };
       
@@ -362,6 +376,7 @@ function QuestionnaireScreen() {
             answers: formattedAnswers,
             keep_until_day: plan.keepUntilDay,
             closing_stars: plan.closingStars,
+            kind: isQuick ? 'quick' : 'full',
           }),
         });
 
@@ -399,7 +414,7 @@ function QuestionnaireScreen() {
       }
       
       // CRITICAL: Always navigate, even if API fails
-      await AsyncStorage.removeItem('screening_v2_progress');
+      await AsyncStorage.removeItem(PROGRESS_KEY);
       router.replace('/screening/results');
       
     } catch (error) {
@@ -414,7 +429,7 @@ function QuestionnaireScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.progressInfo}>
-          <Text style={styles.progressText}>Domanda {currentQuestionIndex + 1}/21</Text>
+          <Text style={styles.progressText}>{isQuick ? 'Controllo rapido · ' : ''}Domanda {currentQuestionIndex + 1}/{totalQuestions}</Text>
           <Text style={styles.timeText}>~{timeRemaining} min</Text>
         </View>
         <View style={styles.progressBarContainer}>
@@ -483,7 +498,7 @@ function QuestionnaireScreen() {
           disabled={loading}
         >
           <Text style={styles.nextButtonText}>
-            {loading ? 'Caricamento...' : currentQuestionIndex === 20 ? 'Completa' : 'Avanti'}
+            {loading ? 'Caricamento...' : currentQuestionIndex === totalQuestions - 1 ? 'Completa' : 'Avanti'}
           </Text>
           {currentQuestionIndex < 20 && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
         </Pressable>

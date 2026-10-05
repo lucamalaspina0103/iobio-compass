@@ -87,6 +87,18 @@ export default function ProfiloScreen() {
     setShowRetakeModal(true);
   };
 
+  // Controllo rapido (7 domande): stesso limite degli ospiti a ciclo finito
+  const handleQuickCheck = async () => {
+    if (isGuest) {
+      const elapsed = await getElapsedDays();
+      if (elapsed !== null && elapsed > 30) {
+        setShowGuestGateModal(true);
+        return;
+      }
+    }
+    router.push({ pathname: '/screening/questionnaire', params: { mode: 'quick' } });
+  };
+
   const confirmRetakeScreening = () => {
     setShowRetakeModal(false);
     router.push('/screening/profile');
@@ -168,6 +180,14 @@ export default function ProfiloScreen() {
                 <Ionicons name="clipboard" size={24} color="#7CB342" />
               </View>
               <Text style={styles.menuText}>Rifai lo screening</Text>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </Pressable>
+
+            <Pressable style={styles.menuItem} onPress={handleQuickCheck}>
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="pulse" size={24} color="#7CB342" />
+              </View>
+              <Text style={styles.menuText}>Controllo rapido (2 minuti)</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 

@@ -25,6 +25,7 @@ import {
   dismissNotice,
 } from '../../src/lib/cycleNotices';
 import CycleNotice from '../../src/components/CycleNotice';
+import { getDaysSinceLastScreening, isCheckDue } from '../../src/lib/checkDue';
 import { getBankedStars } from '../../src/lib/rescreen';
 import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
 import {
@@ -65,6 +66,7 @@ export default function OggiScreen() {
   const [celebration, setCelebration] = useState<number | null>(null);
   const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
   const [elapsedDays, setElapsedDays] = useState<number | null>(null);
+  const [daysSinceCheck, setDaysSinceCheck] = useState<number | null>(null); // giorni dall'ultimo screening
   const [dismissedNotices, setDismissedNotices] = useState<Awaited<ReturnType<typeof loadDismissed>>>([]);
   const [writeTask, setWriteTask] = useState<PianoTask | null>(null); // task tipo "Scrivi..." in corso
   const [resourceTask, setResourceTask] = useState<PianoTask | null>(null); // task tipo "Leggi/Ascolta..." in corso
@@ -135,6 +137,7 @@ export default function OggiScreen() {
       const day = await getCurrentDay();
       setCurrentDay(day);
       setElapsedDays(await getElapsedDays());
+      setDaysSinceCheck(await getDaysSinceLastScreening(isGuest || !user?.id, user?.id));
       setDismissedNotices(await loadDismissed());
 
       if (isGuest || !user?.id) {
@@ -259,10 +262,16 @@ export default function OggiScreen() {
   // Avvisi non bloccanti: Guest (salva i progressi) e fine ciclo
   const isGuestMode = isGuest || !user?.id;
   const notice: CycleNoticeKind | null =
-    allTasks.length > 0 ? getCycleNotice(isGuestMode, currentDay, elapsedDays, dismissedNotices) : null;
+    allTasks.length > 0
+      ? getCycleNotice(isGuestMode, currentDay, elapsedDays, dismissedNotices, isCheckDue(daysSinceCheck, elapsedDays))
+      : null;
 
   const handleNoticePress = () => {
-    router.push(notice === 'registered_ended' ? '/screening/profile' : '/salva-progressi');
+    if (notice === 'check_due') {
+      router.push({ pathname: '/screening/questionnaire', params: { mode: 'quick' } });
+    } else {
+      router.push(notice === 'registered_ended' ? '/screening/profile' : '/salva-progressi');
+    }
   };
 
   const handleNoticeDismiss = async () => {
@@ -307,6 +316,7 @@ export default function OggiScreen() {
             <CycleNotice
               kind={notice}
               currentDay={currentDay}
+              daysSince={daysSinceCheck}
               onPress={handleNoticePress}
               onDismiss={handleNoticeDismiss}
             />

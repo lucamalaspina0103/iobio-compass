@@ -1,10 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getAreaInfo } from '../../src/lib/pianoPlan';
+import { loadPreviousScreening, ScreeningHistoryEntry } from '../../src/lib/screeningHistory';
+import { parseDate } from '../../src/lib/checkDue';
 
 // Conditionally import victory-native only on mobile
 let VictoryPolarAxis: any = null;
@@ -24,29 +27,26 @@ if (Platform.OS !== 'web') {
 
 const isWeb = Platform.OS === 'web';
 
-const AREA_ACTIONS = {
-  'Energia': 'Inizia la giornata con 10 minuti di movimento',
-  'Sonno': 'Crea una routine serale rilassante',
-  'Stress': 'Pratica 5 minuti di respirazione profonda',
-  'Movimento': 'Aggiungi una camminata di 15 minuti',
-  'Alimentazione': 'Pianifica pasti sani per la settimana',
-  'Pelle': 'Idrata la pelle mattina e sera',
-  'Equilibrio mentale': 'Dedica tempo alla mindfulness',
-};
-
-const AREA_NAMES: { [key: string]: string } = {
-  'Energia': 'Energia',
-  'Sonno': 'Sonno',
-  'Stress': 'Gestione dello Stress',
-  'Movimento': 'Attività Fisica',
-  'Alimentazione': 'Alimentazione',
-  'Pelle': 'Cura della Pelle',
-  'Equilibrio mentale': 'Equilibrio Mentale',
+const AREA_ACTIONS: { [key: string]: string } = {
+  energia: 'Inizia la giornata con 10 minuti di movimento',
+  sonno: 'Crea una routine serale rilassante',
+  stress: 'Pratica 5 minuti di respirazione profonda',
+  movimento: 'Aggiungi una camminata di 15 minuti',
+  alimentazione: 'Pianifica pasti sani per la settimana',
+  pelle: 'Prenditi cura di sonno, idratazione e alimentazione',
+  equilibrio_mentale: 'Dedica qualche minuto alla mindfulness',
 };
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const { screeningResult } = useAppContext();
+  const { user, isGuest, screeningResult } = useAppContext();
+  const [previous, setPrevious] = useState<ScreeningHistoryEntry | null>(null);
+
+  // Confronto con l'ultimo screening (completo o rapido) fatto prima di questo
+  useEffect(() => {
+    if (!screeningResult) return;
+    loadPreviousScreening(screeningResult.id, isGuest, user?.id).then(setPrevious);
+  }, [screeningResult?.id]);
 
   if (!screeningResult) {
     return (
@@ -88,6 +88,20 @@ export default function ResultsScreen() {
   };
 
   const interpretation = getScoreInterpretation(indice_iobio);
+  const isQuick = screeningResult.kind === 'quick';
+
+  // Cosa e' cambiato dall'ultima volta: tono sempre incoraggiante, nessun giudizio
+  const delta = previous ? indice_iobio - previous.indice_iobio : 0;
+  const areaChanges = previous
+    ? Object.keys(area_scores)
+        .map(area => ({ area, diff: area_scores[area] - (previous.area_scores[area] ?? area_scores[area]) }))
+        .filter(x => x.diff !== 0)
+    : [];
+  const grew = areaChanges.filter(x => x.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, 3);
+  const toWatch = areaChanges.filter(x => x.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, 2);
+  const daysAgo = previous
+    ? Math.max(0, Math.floor((Date.now() - parseDate(previous.date)) / (24 * 60 * 60 * 1000)))
+    : 0;
 
   const chartData = Object.keys(area_scores).map(area => ({
     x: area.length > 15 ? area.substring(0, 12) + '...' : area,
@@ -113,6 +127,35 @@ export default function ResultsScreen() {
             <Text style={styles.scoreDescription}>{interpretation.description}</Text>
           </LinearGradient>
 
+          {isQuick && (
+            <Text style={styles.quickNote}>Controllo rapido · il piano è stato aggiornato da oggi in poi</Text>
+          )}
+
+          {previous && (
+            <View style={styles.compareCard}>
+              <Text style={styles.compareTitle}>
+                Rispetto all'ultimo controllo{daysAgo > 0 ? ` (${daysAgo} ${daysAgo === 1 ? 'giorno' : 'giorni'} fa)` : ''}
+              </Text>
+              <Text style={styles.compareDelta}>
+                Indice IOBIO: {previous.indice_iobio} → {indice_iobio}
+                {delta > 0 ? `  (+${delta})` : delta < 0 ? `  (${delta})` : '  (stabile)'}
+              </Text>
+              {grew.length > 0 && (
+                <Text style={styles.compareGood}>
+                  In crescita: {grew.map(x => `${getAreaInfo(x.area).name} +${x.diff}`).join(' · ')}
+                </Text>
+              )}
+              {toWatch.length > 0 && (
+                <Text style={styles.compareWatch}>
+                  Da seguire: {toWatch.map(x => getAreaInfo(x.area).name).join(' · ')}
+                </Text>
+              )}
+              {areaChanges.length === 0 && (
+                <Text style={styles.compareWatch}>Nessun cambiamento: la costanza è già un risultato.</Text>
+              )}
+            </View>
+          )}
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>I tuoi Top 3 Focus</Text>
             <Text style={styles.sectionSubtitle}>Aree dove concentrare l'attenzione</Text>
@@ -124,25 +167,24 @@ export default function ResultsScreen() {
                     <Text style={styles.focusRankText}>{index + 1}</Text>
                   </View>
                   <View style={styles.focusInfo}>
-                    <Text style={styles.focusArea}>{area}</Text>
+                    <Text style={styles.focusArea}>{getAreaInfo(area).name}</Text>
                     <Text style={styles.focusScore}>{area_scores[area]}/100</Text>
                   </View>
                 </View>
                 <Text style={styles.focusAction}>
-                  💡 {AREA_ACTIONS[area as keyof typeof AREA_ACTIONS]}
+                  💡 {AREA_ACTIONS[area] || 'Un piccolo gesto al giorno fa la differenza'}
                 </Text>
-                <TouchableOpacity style={styles.addButton}>
-                  <Ionicons name="add-circle" size={20} color="#7CB342" />
-                  <Text style={styles.addButtonText}>Aggiungi al piano</Text>
-                </TouchableOpacity>
+                <View style={styles.addButton}>
+                  <Ionicons name="checkmark-circle" size={20} color="#7CB342" />
+                  <Text style={styles.addButtonText}>Già nel tuo piano</Text>
+                </View>
               </View>
             ))}
           </View>
 
-          <TouchableOpacity
+          <Pressable
             style={styles.soundCard}
-            onPress={() => router.replace('/(tabs)/suoni')}
-            activeOpacity={0.85}
+            onPress={() => router.replace({ pathname: '/(tabs)/suoni', params: { session: weak_areas[0] } })}
           >
             <View style={styles.soundCardLeft}>
               <View style={styles.soundIconBg}>
@@ -151,12 +193,12 @@ export default function ResultsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.soundCardTitle}>Ascolta la tua sessione consigliata</Text>
                 <Text style={styles.soundCardSub}>
-                  Frequenze selezionate per {AREA_NAMES[weak_areas[0]] || weak_areas[0]}
+                  Frequenze selezionate per {getAreaInfo(weak_areas[0]).name}
                 </Text>
               </View>
             </View>
             <Ionicons name="arrow-forward-circle" size={28} color="#7CB342" />
-          </TouchableOpacity>
+          </Pressable>
 
           {!isWeb && (
             <View style={styles.chartCard}>
@@ -210,10 +252,9 @@ export default function ResultsScreen() {
           {isWeb && (
             <View style={styles.chartCard}>
               <Text style={styles.sectionTitle}>Tutte le Aree</Text>
-              <Text style={styles.webChartNote}>📱 Grafico radar disponibile su mobile</Text>
               {Object.keys(area_scores).map((area, index) => (
                 <View key={index} style={styles.areaRow}>
-                  <Text style={styles.areaRowName}>{area}</Text>
+                  <Text style={styles.areaRowName}>{getAreaInfo(area).name}</Text>
                   <View style={styles.areaRowBar}>
                     <View style={[styles.areaRowFill, { width: `${area_scores[area]}%` }]} />
                   </View>
@@ -223,13 +264,13 @@ export default function ResultsScreen() {
             </View>
           )}
 
-          <TouchableOpacity
+          <Pressable
             style={styles.ctaButton}
             onPress={() => router.replace('/(tabs)/oggi')}
           >
             <Text style={styles.ctaButtonText}>Vai al Piano Personalizzato</Text>
             <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -237,6 +278,18 @@ export default function ResultsScreen() {
 }
 
 const styles = StyleSheet.create({
+  quickNote: { textAlign: 'center', color: '#7CB342', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  compareCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    gap: 6,
+  },
+  compareTitle: { fontSize: 15, fontWeight: '700', color: '#4A4A4A' },
+  compareDelta: { fontSize: 15, color: '#4A4A4A' },
+  compareGood: { fontSize: 13, color: '#558B2F', lineHeight: 19 },
+  compareWatch: { fontSize: 13, color: '#8D6E63', lineHeight: 19 },
   container: {
     flex: 1,
     backgroundColor: '#F5F5DC',
