@@ -58,6 +58,7 @@ class GuestScreening(BaseModel):
     area_scores: Dict[str, int]
     weak_areas: List[str]
     date: Optional[str] = None  # ISO 8601
+    kind: str = 'full'
 
 class GuestTask(BaseModel):
     day: int
@@ -116,6 +117,9 @@ class ScreeningSubmit(BaseModel):
     keep_until_day: int = 0
     # Stelle del ciclo che si chiude, da mettere in cassaforte (solo con keep_until_day=0)
     closing_stars: int = 0
+    # 'full' = screening completo (21 domande), 'quick' = controllo rapido (7 domande generali,
+    # una per area, stessa scala: l'Indice resta confrontabile nel tempo)
+    kind: str = 'full'
 
 class PianoStart(BaseModel):
     user_id: str
@@ -128,6 +132,7 @@ class ScreeningResult(BaseModel):
     indice_iobio: int
     area_scores: Dict[str, int]
     weak_areas: List[str]
+    kind: str = 'full'
     date: datetime = Field(default_factory=datetime.utcnow)
 
 class CheckInSubmit(BaseModel):
@@ -521,6 +526,7 @@ async def migrate_guest_data(user_id: str, guest: GuestData):
             indice_iobio=s.indice_iobio,
             area_scores=s.area_scores,
             weak_areas=s.weak_areas,
+            kind=s.kind if s.kind in ('full', 'quick') else 'full',
             date=parse_client_date(s.date) or datetime.utcnow(),
         ).dict()
         for s in guest.screenings
@@ -655,7 +661,8 @@ async def submit_screening(data: ScreeningSubmit):
         answers=[answer.dict() for answer in data.answers],
         indice_iobio=indice_iobio,
         area_scores=area_scores,
-        weak_areas=weak_areas
+        weak_areas=weak_areas,
+        kind=data.kind if data.kind in ('full', 'quick') else 'full',
     )
 
     # Save to database
