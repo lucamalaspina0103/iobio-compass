@@ -12,6 +12,13 @@
 export interface Idea {
   text: string; // spiegazione o passaggio, leggibile subito
   pointer?: string; // fonte/brano/titolo da cercare, mostrato come etichetta
+  action?: IdeaAction; // pulsante che porta a una parte dell'app (es. una sessione di Suoni)
+}
+
+export interface IdeaAction {
+  label: string;
+  route: string;
+  params?: { [key: string]: string };
 }
 
 export type IdeaKind = 'read' | 'listen' | 'try';
@@ -23,7 +30,7 @@ export interface IdeaCategory {
   title: string; // intestazione sopra il consiglio
 }
 
-const i = (text: string, pointer?: string): Idea => ({ text, pointer });
+const i = (text: string, pointer?: string, action?: IdeaAction): Idea => ({ text, pointer, action });
 
 export const IDEA_CATEGORIES: IdeaCategory[] = [
   { key: 'read_inspire', kind: 'read', pattern: /leggi qualcosa di ispirazionale/i, title: 'Qualcosa da leggere' },
@@ -42,7 +49,6 @@ export const IDEA_CATEGORIES: IdeaCategory[] = [
   { key: 'yoga', kind: 'try', pattern: /yoga/i, title: 'Yoga in 10 minuti' },
   { key: 'hobby', kind: 'try', pattern: /hobby/i, title: 'Un hobby per 10 minuti' },
   { key: 'nature', kind: 'try', pattern: /nella natura/i, title: 'Tempo nella natura' },
-  { key: 'mask', kind: 'try', pattern: /maschera idratante/i, title: 'Maschera idratante' },
   { key: 'face_massage', kind: 'try', pattern: /automassaggio al viso/i, title: 'Automassaggio al viso' },
 ];
 
@@ -91,14 +97,9 @@ export const IDEAS: { [key: string]: Idea[] } = {
 
   // ===== Stress =====
   music_relax: [
-    i("Apri la sezione \"Suoni\" qui nell'app e lasciati accompagnare per 10 minuti, ad occhi chiusi."),
-    i("Pianoforte semplice e morbido, ideale per rallentare.", 'Ludovico Einaudi – "Nuvole bianche"'),
-    i("Poche note lente e sospese: un classico per fermarsi un momento.", 'Erik Satie – "Gymnopédie n. 1"'),
-    i("Dolce e luminoso, perfetto per respirare più piano.", 'Claude Debussy – "Clair de lune"'),
-    i("Musica pensata per accompagnare l'attesa e il silenzio, senza chiedere attenzione.", 'Brian Eno – "Music for Airports"'),
-    i("Archi lenti e quiete, per ritrovare un respiro più lungo.", 'Arvo Pärt – "Spiegel im Spiegel"'),
-    i("Una melodia semplice e ripetuta, ottima per staccare dai pensieri.", 'Johann Sebastian Bach – "Aria" dalle Variazioni Goldberg'),
-    i("Cuffie, luci basse, occhi chiusi: 10 minuti senza fare altro contano più della scelta del brano."),
+    i('Nella sezione Suoni trovi la sessione "Rilassamento Profondo", onde alpha a 10 Hz pensate per il rilassamento. Mettiti comodo con le cuffie stereo, imposta 10 minuti e premi Play.', 'Suoni › Rilassamento Profondo', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'stress' } }),
+    i('Per una pausa più meditativa: la sessione "Equilibrio Mentale", onde theta a 6 Hz. Cuffie stereo, occhi chiusi, 10 minuti.', 'Suoni › Equilibrio Mentale', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'equilibrio_mentale' } }),
+    i('La sessione "Rigenerazione Cellulare", onde theta a 4 Hz, per una pausa lenta e profonda. Cuffie stereo e 10 minuti senza fare altro.', 'Suoni › Rigenerazione Cellulare', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'pelle' } }),
   ],
   hobby: [
     i("Colora un mandala o disegna scarabocchi liberi: non serve saper disegnare, serve solo lasciare andare la mano."),
@@ -120,14 +121,10 @@ export const IDEAS: { [key: string]: Idea[] } = {
 
   // ===== Energia =====
   music_energy: [
-    i("Ritmo che fa muovere subito le gambe.", 'Earth, Wind & Fire – "September"'),
-    i("Impossibile restare fermi.", 'Pharrell Williams – "Happy"'),
-    i("Un'esplosione di energia in meno di quattro minuti.", 'Queen – "Don\'t Stop Me Now"'),
-    i("Per chi ha bisogno di una scarica di grinta.", 'Survivor – "Eye of the Tiger"'),
-    i("Archi veloci e luminosi: il risveglio della primavera in musica.", 'Antonio Vivaldi – "Primavera" (Le quattro stagioni)'),
-    i("Allegro e positivo, perfetto per partire con il piede giusto.", 'Jovanotti – "Penso positivo"'),
-    i("Crea una mini playlist di 5 brani che ti fanno venire voglia di muoverti, e tienila pronta per i momenti di calo."),
+    i('Nella sezione Suoni trovi la sessione "Energia e Focus", onde beta a 20 Hz pensate per energia e concentrazione. Cuffie stereo, 10 minuti, Play.', 'Suoni › Energia e Focus', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'energia' } }),
+    i('Se vuoi una spinta per muoverti: la sessione "Motivazione Attiva", onde beta a 18 Hz. Cuffie stereo e 10 minuti.', 'Suoni › Motivazione Attiva', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'movimento' } }),
   ],
+
   snack: [
     i("Frutta fresca e una piccola manciata di mandorle o noci: zuccheri e grassi buoni insieme, per un'energia più stabile."),
     i("Un vasetto di yogurt greco naturale con qualche pezzetto di frutta."),
@@ -191,13 +188,8 @@ export const IDEAS: { [key: string]: Idea[] } = {
   ],
 
   // ===== Pelle =====
-  mask: [
-    i("Una maschera idratante a base di acido ialuronico o glicerina, applicata su pelle pulita per 10-15 minuti. Se è nuova, prova prima un po' di prodotto sul polso per verificare che non irriti."),
-    i("Una versione semplice: yogurt bianco naturale con un cucchiaino di miele, 10 minuti su pelle pulita, poi risciacqua con acqua tiepida. Prova prima sul polso."),
-    i("Un tessuto imbevuto di siero idratante, quello monouso: pratico, si dimentica sul viso mentre fai altro per 15 minuti."),
-  ],
   face_massage: [
-    i("Con le dita pulite e un goccio di crema o olio: parti dal centro della fronte verso le tempie con piccoli cerchi lenti, 30 secondi."),
+    i("Con le dita pulite e le mani asciutte: parti dal centro della fronte verso le tempie con piccoli cerchi lenti, 30 secondi."),
     i("Poi dagli angoli del naso verso gli zigomi e fino alle orecchie, 30 secondi, con pressione leggera."),
     i("Infine dal mento lungo la mandibola verso le orecchie, 30 secondi. Chiudi con tre respiri lenti e le mani calde sul viso."),
   ],

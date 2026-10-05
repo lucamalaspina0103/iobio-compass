@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { getIdea, getIdeaTitle } from '../lib/taskInteraction';
-import { IdeaKind } from '../lib/ideaLibrary';
+import { IdeaKind, IdeaAction } from '../lib/ideaLibrary';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -47,7 +48,8 @@ export default function ResourceSuggestionModal({
 }: ResourceSuggestionModalProps) {
   const [stage, setStage] = useState<Stage>('choice');
   const [offset, setOffset] = useState(0);
-  const [suggestion, setSuggestion] = useState<{ text: string; pointer?: string; fromAI: boolean } | null>(null);
+  const router = useRouter();
+  const [suggestion, setSuggestion] = useState<{ text: string; pointer?: string; action?: IdeaAction; fromAI: boolean } | null>(null);
   const [customTopic, setCustomTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -65,7 +67,7 @@ export default function ResourceSuggestionModal({
   const showCurated = (nextOffset: number) => {
     const idea = getIdea(taskText, area, seed + nextOffset);
     setOffset(nextOffset);
-    setSuggestion({ text: idea.text, pointer: idea.pointer, fromAI: false });
+    setSuggestion({ text: idea.text, pointer: idea.pointer, action: idea.action, fromAI: false });
     setSaved(false);
     setStage('suggestion');
   };
@@ -140,9 +142,27 @@ export default function ResourceSuggestionModal({
                 </View>
               )}
 
-              <Pressable style={styles.primaryButton} onPress={() => { onComplete(); onClose(); }}>
-                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-                <Text style={styles.primaryButtonText}>Segna come fatto</Text>
+              {suggestion.action && (
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={() => {
+                    const action = suggestion.action!;
+                    onClose();
+                    router.push({ pathname: action.route as any, params: action.params });
+                  }}
+                >
+                  <Ionicons name="headset" size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>{suggestion.action.label}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                style={suggestion.action ? styles.outlineButton : styles.primaryButton}
+                onPress={() => { onComplete(); onClose(); }}
+              >
+                <Ionicons name="checkmark-circle" size={18} color={suggestion.action ? '#7CB342' : '#FFFFFF'} />
+                <Text style={suggestion.action ? styles.outlineButtonText : styles.primaryButtonText}>
+                  {suggestion.action ? 'Ho già ascoltato, segna come fatto' : 'Segna come fatto'}
+                </Text>
               </Pressable>
               {!suggestion.fromAI && (
                 <Pressable style={styles.secondaryButton} onPress={() => showCurated(offset + 1)}>
@@ -152,9 +172,12 @@ export default function ResourceSuggestionModal({
               <Pressable style={styles.secondaryButton} onPress={handleSaveToDiary} disabled={saved}>
                 <Text style={styles.secondaryButtonText}>{saved ? 'Salvato nel diario ✓' : 'Salva nel diario'}</Text>
               </Pressable>
-              <Pressable onPress={() => setStage('custom')}>
-                <Text style={styles.linkText}>...oppure chiedi qualcosa di diverso</Text>
-              </Pressable>
+              {/* Per la musica restiamo sempre sulle sessioni binaurali dell'app, niente musica esterna */}
+              {!suggestion.action && (
+                <Pressable onPress={() => setStage('custom')}>
+                  <Text style={styles.linkText}>...oppure chiedi qualcosa di diverso</Text>
+                </Pressable>
+              )}
             </>
           )}
 
@@ -242,6 +265,18 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.5 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  outlineButton: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: '#7CB342',
+  },
+  outlineButtonText: { color: '#7CB342', fontSize: 15, fontWeight: '600' },
   secondaryButton: { padding: 12, alignItems: 'center', marginBottom: 2 },
   secondaryButtonText: { color: '#7CB342', fontSize: 15, fontWeight: '500' },
   linkText: { color: '#999', fontSize: 14, textAlign: 'center', textDecorationLine: 'underline', marginTop: 4 },

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams } from 'expo-router';
 import { useAppContext } from '../../src/contexts/AppContext';
 
 // Binaural beat sessions mapped to wellness areas
@@ -118,6 +119,8 @@ const DURATION_OPTIONS = [
 
 export default function SuoniScreen() {
   const { screeningResult } = useAppContext();
+  // Aperta da un task del piano ("Ascolta musica rilassante...") con la sessione gia' scelta
+  const { session: sessionParam } = useLocalSearchParams<{ session?: string }>();
   const [selectedSession, setSelectedSession] = useState<BinauralSession>(BINAURAL_SESSIONS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(10);
@@ -133,6 +136,12 @@ export default function SuoniScreen() {
   // Auto-select session based on screening weak areas
   useEffect(() => {
     const loadRecommendedSession = async () => {
+      // La sessione richiesta da un task ha la precedenza su quella consigliata dallo screening
+      const requested = BINAURAL_SESSIONS.find(s => s.id === sessionParam);
+      if (requested) {
+        setSelectedSession(requested);
+        return;
+      }
       try {
         const resultsStr = await AsyncStorage.getItem('iobio_latest_results');
         if (resultsStr) {
@@ -153,7 +162,7 @@ export default function SuoniScreen() {
     };
     
     loadRecommendedSession();
-  }, [screeningResult]);
+  }, [screeningResult, sessionParam]);
 
   // Timer countdown
   useEffect(() => {
@@ -445,15 +454,18 @@ export default function SuoniScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Hidden WebView for audio engine */}
-      <WebView
-        ref={webViewRef}
-        source={{ html: '<html><body></body></html>' }}
-        style={{ height: 0, width: 0, opacity: 0 }}
-        javaScriptEnabled={true}
-        mediaPlaybackRequiresUserAction={false}
-      />
-      
+      {/* Hidden WebView for audio engine (solo telefono: sul web l'audio usa Web Audio e
+          il componente mostrerebbe un messaggio d'errore a schermo) */}
+      {Platform.OS !== 'web' && (
+        <WebView
+          ref={webViewRef}
+          source={{ html: '<html><body></body></html>' }}
+          style={{ height: 0, width: 0, opacity: 0 }}
+          javaScriptEnabled={true}
+          mediaPlaybackRequiresUserAction={false}
+        />
+      )}
+
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

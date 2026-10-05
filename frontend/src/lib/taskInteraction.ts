@@ -75,7 +75,7 @@ export const CURATED_RESOURCES: { [area: string]: CuratedResource[] } = {
     { passage: "Mangiare con calma, senza distrazioni, cambia il modo in cui il corpo riconosce fame e sazietà - non solo cosa mangi, ma come." },
   ],
   pelle: [
-    { passage: "La pelle riflette tutto il corpo: sonno, stress e alimentazione contano quanto la crema che applichi. Prendersene cura è prendersi cura di te nell'insieme." },
+    { passage: "La pelle riflette tutto il corpo: sonno, stress e alimentazione contano moltissimo. Prendersene cura è prendersi cura di te nell'insieme." },
     { passage: "Bere a sufficienza e proteggerti dal sole restano, tra tutte le abitudini, quelle con l'effetto più duraturo sulla pelle nel tempo." },
   ],
   equilibrio_mentale: [
