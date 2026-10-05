@@ -3,7 +3,7 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  TouchableOpacity, 
+  Pressable, 
   ScrollView,
   Platform,
   Animated,
@@ -37,7 +37,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 10,
     baseFrequency: 200,
     waveType: 'alpha',
-    description: 'Onde Alpha a 10Hz per ridurre stress e ansia',
+    description: 'Onde Alpha a 10 Hz, pensate per aiutarti a rilassarti',
     color: '#81C784',
     icon: 'leaf',
   },
@@ -48,7 +48,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 2,
     baseFrequency: 150,
     waveType: 'delta',
-    description: 'Onde Delta a 2Hz per un sonno profondo e rigenerante',
+    description: 'Onde Delta a 2 Hz, pensate per accompagnarti verso il sonno',
     color: '#7986CB',
     icon: 'moon',
   },
@@ -59,7 +59,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 20,
     baseFrequency: 250,
     waveType: 'beta',
-    description: 'Onde Beta a 20Hz per aumentare energia e concentrazione',
+    description: 'Onde Beta a 20 Hz, pensate per energia e concentrazione',
     color: '#FFB74D',
     icon: 'flash',
   },
@@ -70,7 +70,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 6,
     baseFrequency: 180,
     waveType: 'theta',
-    description: 'Onde Theta a 6Hz per meditazione e creatività',
+    description: 'Onde Theta a 6 Hz, pensate per la meditazione',
     color: '#BA68C8',
     icon: 'bulb',
   },
@@ -81,7 +81,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 18,
     baseFrequency: 240,
     waveType: 'beta',
-    description: 'Onde Beta a 18Hz per motivazione e attività fisica',
+    description: 'Onde Beta a 18 Hz, pensate per darti motivazione prima di muoverti',
     color: '#4DD0E1',
     icon: 'walk',
   },
@@ -92,7 +92,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 8,
     baseFrequency: 190,
     waveType: 'alpha',
-    description: 'Onde Alpha a 8Hz per mindful eating',
+    description: 'Onde Alpha a 8 Hz, pensate per mangiare con calma e attenzione',
     color: '#AED581',
     icon: 'nutrition',
   },
@@ -103,7 +103,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     frequency: 4,
     baseFrequency: 160,
     waveType: 'theta',
-    description: 'Onde Theta a 4Hz per rilassamento e rigenerazione',
+    description: 'Onde Theta a 4 Hz, pensate per il rilassamento',
     color: '#F48FB1',
     icon: 'sparkles',
   },
@@ -120,16 +120,17 @@ const DURATION_OPTIONS = [
 export default function SuoniScreen() {
   const { screeningResult } = useAppContext();
   // Aperta da un task del piano ("Ascolta musica rilassante...") con la sessione gia' scelta
-  const { session: sessionParam } = useLocalSearchParams<{ session?: string }>();
+  const { session: sessionParam, minutes: minutesParam } = useLocalSearchParams<{ session?: string; minutes?: string }>();
   const [selectedSession, setSelectedSession] = useState<BinauralSession>(BINAURAL_SESSIONS[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(10);
   const [timeRemaining, setTimeRemaining] = useState(10 * 60);
   const [volume, setVolume] = useState(0.5);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
+  const [completed, setCompleted] = useState(false); // sessione appena finita
   
   const webViewRef = useRef<WebView>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -164,26 +165,45 @@ export default function SuoniScreen() {
     loadRecommendedSession();
   }, [screeningResult, sessionParam]);
 
+  // Durata richiesta da un task (es. meditazione di 5 minuti)
+  useEffect(() => {
+    const minutes = parseInt(minutesParam || '', 10);
+    if (!isNaN(minutes) && DURATION_OPTIONS.some(o => o.value === minutes) && !isPlaying) {
+      setDuration(minutes);
+      setTimeRemaining(minutes * 60);
+      setCompleted(false);
+    }
+  }, [minutesParam, sessionParam]);
+
+  // Se la sessione cambia mentre suona, si ferma: altrimenti si sentirebbe quella vecchia
+  const lastSessionId = useRef(selectedSession.id);
+  useEffect(() => {
+    if (lastSessionId.current !== selectedSession.id) {
+      lastSessionId.current = selectedSession.id;
+      if (isPlaying) stopAudio();
+      setCompleted(false);
+      setTimeRemaining(duration * 60);
+    }
+  }, [selectedSession.id]);
+
   // Timer countdown
   useEffect(() => {
-    if (isPlaying && timeRemaining > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            stopAudio();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
+    if (!isPlaying) return;
+    const id = setInterval(() => {
+      setTimeRemaining(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    timerRef.current = id;
+    return () => clearInterval(id);
   }, [isPlaying]);
+
+  // A fine sessione: si ferma l'audio e il timer torna alla durata scelta (non resta "00:00")
+  useEffect(() => {
+    if (isPlaying && timeRemaining === 0) {
+      stopAudio();
+      setCompleted(true);
+      setTimeRemaining(duration * 60);
+    }
+  }, [isPlaying, timeRemaining]);
 
   // Animation for playing state
   useEffect(() => {
@@ -239,6 +259,17 @@ export default function SuoniScreen() {
     oscillatorR: null,
     gainNode: null,
   });
+
+  // Se la schermata viene chiusa, l'audio non deve restare acceso
+  useEffect(() => {
+    return () => {
+      try {
+        webAudioRef.current.oscillatorL?.stop();
+        webAudioRef.current.oscillatorR?.stop();
+        webAudioRef.current.context?.close();
+      } catch (e) {}
+    };
+  }, []);
 
   // Start audio using Web Audio API directly (for web platform)
   const startWebAudio = () => {
@@ -323,6 +354,7 @@ export default function SuoniScreen() {
   };
 
   const playAudio = () => {
+    setCompleted(false);
     setIsPlaying(true);
     setTimeRemaining(duration * 60);
     
@@ -440,6 +472,7 @@ export default function SuoniScreen() {
   };
 
   const selectDuration = (minutes: number) => {
+    setCompleted(false);
     setDuration(minutes);
     setTimeRemaining(minutes * 60);
     setShowDurationPicker(false);
@@ -474,7 +507,7 @@ export default function SuoniScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Suoni Binaurali</Text>
           <Text style={styles.headerSubtitle}>
-            Frequenze per il tuo benessere
+            Suoni per rilassarti, concentrarti o dormire. Usa le cuffie stereo.
           </Text>
         </View>
 
@@ -509,7 +542,7 @@ export default function SuoniScreen() {
               <View style={styles.timerInner}>
                 <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
                 <Text style={styles.timerLabel}>
-                  {isPlaying ? 'In riproduzione' : 'Pronto'}
+                  {isPlaying ? 'In riproduzione' : completed ? 'Sessione completata ✓' : 'Pronto'}
                 </Text>
               </View>
             </Animated.View>
@@ -529,32 +562,36 @@ export default function SuoniScreen() {
           </View>
 
           {/* Play/Pause Button */}
-          <TouchableOpacity 
+          <Pressable 
             style={[styles.playButton, { backgroundColor: selectedSession.color }]}
             onPress={togglePlayPause}
-            activeOpacity={0.8}
           >
             <Ionicons 
-              name={isPlaying ? 'pause' : 'play'} 
+              name={isPlaying ? 'stop' : 'play'} 
               size={32} 
               color="#FFFFFF" 
             />
-          </TouchableOpacity>
+          </Pressable>
+
+          <View style={styles.headphoneHint}>
+            <Ionicons name="headset" size={16} color="#666" />
+            <Text style={styles.headphoneHintText}>Usa le cuffie stereo</Text>
+          </View>
 
           {/* Duration Selector */}
-          <TouchableOpacity 
+          <Pressable 
             style={styles.durationSelector}
             onPress={() => setShowDurationPicker(!showDurationPicker)}
           >
             <Ionicons name="time-outline" size={20} color="#666" />
             <Text style={styles.durationText}>{duration} minuti</Text>
             <Ionicons name="chevron-down" size={16} color="#666" />
-          </TouchableOpacity>
+          </Pressable>
 
           {showDurationPicker && (
             <View style={styles.durationPicker}>
               {DURATION_OPTIONS.map(option => (
-                <TouchableOpacity
+                <Pressable
                   key={option.value}
                   style={[
                     styles.durationOption,
@@ -568,24 +605,24 @@ export default function SuoniScreen() {
                   ]}>
                     {option.label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           )}
 
           {/* Volume Control */}
           <View style={styles.volumeContainer}>
-            <TouchableOpacity onPress={() => updateVolume(Math.max(0, volume - 0.1))}>
+            <Pressable onPress={() => updateVolume(Math.max(0, volume - 0.1))}>
               <Ionicons name="volume-low" size={24} color="#666" />
-            </TouchableOpacity>
+            </Pressable>
             
             <View style={styles.volumeBar}>
               <View style={[styles.volumeFill, { width: `${volume * 100}%`, backgroundColor: selectedSession.color }]} />
             </View>
             
-            <TouchableOpacity onPress={() => updateVolume(Math.min(1, volume + 0.1))}>
+            <Pressable onPress={() => updateVolume(Math.min(1, volume + 0.1))}>
               <Ionicons name="volume-high" size={24} color="#666" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -594,7 +631,7 @@ export default function SuoniScreen() {
           <Text style={styles.sectionTitle}>Tutte le Sessioni</Text>
           
           {BINAURAL_SESSIONS.map(session => (
-            <TouchableOpacity
+            <Pressable
               key={session.id}
               style={[
                 styles.sessionCard,
@@ -609,7 +646,6 @@ export default function SuoniScreen() {
                 setSelectedSession(session);
                 setTimeRemaining(duration * 60);
               }}
-              activeOpacity={0.7}
             >
               <View style={[styles.sessionCardIcon, { backgroundColor: session.color }]}>
                 <Ionicons name={session.icon as any} size={22} color="#FFFFFF" />
@@ -625,7 +661,7 @@ export default function SuoniScreen() {
               {selectedSession.id === session.id && (
                 <Ionicons name="checkmark-circle" size={24} color={session.color} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
 
@@ -635,14 +671,12 @@ export default function SuoniScreen() {
             <Ionicons name="headset" size={24} color="#7CB342" />
             <Text style={styles.infoTitle}>Usa le cuffie</Text>
             <Text style={styles.infoText}>
-              I suoni binaurali richiedono cuffie stereo per funzionare correttamente.
-              Ogni orecchio riceve una frequenza leggermente diversa.
+              I suoni binaurali funzionano con le cuffie stereo: ogni orecchio riceve una frequenza leggermente diversa.
+              Tieni il volume basso e non ascoltarli mentre guidi o usi macchinari. Non sono un trattamento medico.
             </Text>
           </View>
         </View>
 
-        {/* Build Label */}
-        <Text style={styles.buildLabel}>Build: SUONI-WEBAUDIO-006</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -852,6 +886,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
     marginTop: 2,
+  },
+  headphoneHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  headphoneHintText: {
+    fontSize: 13,
+    color: '#666',
   },
   infoSection: {
     marginBottom: 20,

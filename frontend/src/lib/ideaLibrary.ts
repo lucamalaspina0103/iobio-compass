@@ -19,6 +19,7 @@ export interface IdeaAction {
   label: string;
   route: string;
   params?: { [key: string]: string };
+  doneLabel?: string; // testo del pulsante "segna come fatto" dopo aver aperto l'azione
 }
 
 export type IdeaKind = 'read' | 'listen' | 'try';
@@ -46,6 +47,8 @@ export const IDEA_CATEGORIES: IdeaCategory[] = [
   { key: 'antiox', kind: 'try', pattern: /mangia cibi ricchi di antiossidanti/i, title: 'Cibi ricchi di antiossidanti' },
   { key: 'tisana', kind: 'try', pattern: /tisana rilassante/i, title: 'Una tisana rilassante' },
   { key: 'sport', kind: 'try', pattern: /nuovo sport/i, title: 'Uno sport da provare' },
+  { key: 'meditate_morning', kind: 'try', pattern: /medita per 5 minuti/i, title: 'Meditazione con i suoni' },
+  { key: 'meditate_evening', kind: 'try', pattern: /meditazione serale/i, title: 'Meditazione serale con i suoni' },
   { key: 'yoga', kind: 'try', pattern: /yoga/i, title: 'Yoga in 10 minuti' },
   { key: 'hobby', kind: 'try', pattern: /hobby/i, title: 'Un hobby per 10 minuti' },
   { key: 'nature', kind: 'try', pattern: /nella natura/i, title: 'Tempo nella natura' },
@@ -133,6 +136,18 @@ export const IDEAS: { [key: string]: Idea[] } = {
     i("Una mela a fette con qualche noce, facile da portare in borsa."),
     i("Una banana con un cucchiaino di burro di arachidi (solo arachidi, senza zuccheri aggiunti)."),
     i("Frutta secca non salata in un contenitorino: la porzione giusta è una manciata."),
+  ],
+
+  // ===== Meditazione (usa le sessioni di Suoni, 5 minuti) =====
+  meditate_morning: [
+    i('Siediti comodo, con la schiena dritta e le cuffie stereo. Avvia la sessione "Equilibrio Mentale" per 5 minuti: porta l\'attenzione al respiro e, ogni volta che la mente si distrae, torna al respiro con gentilezza.', 'Suoni › Equilibrio Mentale (5 minuti)', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'equilibrio_mentale', minutes: '5' }, doneLabel: 'Ho già meditato, segna come fatto' }),
+    i('Per iniziare la giornata con calma: la sessione "Rilassamento Profondo" per 5 minuti. Occhi chiusi, conta dieci respiri lenti e ricomincia da uno quando perdi il conto.', 'Suoni › Rilassamento Profondo (5 minuti)', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'stress', minutes: '5' }, doneLabel: 'Ho già meditato, segna come fatto' }),
+    i('Per partire concentrato: la sessione "Energia e Focus" per 5 minuti, seduto, con l\'attenzione al respiro e a un solo obiettivo della giornata.', 'Suoni › Energia e Focus (5 minuti)', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'energia', minutes: '5' }, doneLabel: 'Ho già meditato, segna come fatto' }),
+  ],
+  meditate_evening: [
+    i('Luci basse, cuffie stereo, posizione comoda: la sessione "Rilassamento Profondo" per 5 minuti. Rilassa spalle e mandibola e lascia andare la giornata un respiro alla volta.', 'Suoni › Rilassamento Profondo (5 minuti)', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'stress', minutes: '5' }, doneLabel: 'Ho già meditato, segna come fatto' }),
+    i('Seduto o sdraiato comodo: la sessione "Sonno Ristoratore" per 5 minuti. Poi spegni lo schermo e vai a riposare.', 'Suoni › Sonno Ristoratore (5 minuti)', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'sonno', minutes: '5' }, doneLabel: 'Ho già meditato, segna come fatto' }),
+    i('Per chiudere la giornata con la mente quieta: la sessione "Equilibrio Mentale" per 5 minuti, con attenzione al respiro e a tre cose per cui sei grato oggi.', 'Suoni › Equilibrio Mentale (5 minuti)', { label: 'Apri Suoni', route: '/(tabs)/suoni', params: { session: 'equilibrio_mentale', minutes: '5' }, doneLabel: 'Ho già meditato, segna come fatto' }),
   ],
 
   // ===== Movimento =====

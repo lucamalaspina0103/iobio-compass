@@ -161,7 +161,7 @@ export default function ResourceSuggestionModal({
               >
                 <Ionicons name="checkmark-circle" size={18} color={suggestion.action ? '#7CB342' : '#FFFFFF'} />
                 <Text style={suggestion.action ? styles.outlineButtonText : styles.primaryButtonText}>
-                  {suggestion.action ? 'Ho già ascoltato, segna come fatto' : 'Segna come fatto'}
+                  {suggestion.action ? (suggestion.action.doneLabel || 'Ho già ascoltato, segna come fatto') : 'Segna come fatto'}
                 </Text>
               </Pressable>
               {!suggestion.fromAI && (
