@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getCuratedResource } from '../lib/taskInteraction';
+import { getIdea, getIdeaTitle } from '../lib/taskInteraction';
+import { IdeaKind } from '../lib/ideaLibrary';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -9,8 +10,8 @@ interface ResourceSuggestionModalProps {
   visible: boolean;
   taskText: string;
   area: string;
-  kind: 'read' | 'listen';
-  seed: number; // per far variare il consiglio curato nel piano di 30 giorni
+  kind: IdeaKind;
+  seed: number; // per far variare l'idea nel piano di 30 giorni
   onComplete: () => void; // segna il task come fatto
   onClose: () => void;
   onSaveToDiary: (text: string) => void;
@@ -18,10 +19,22 @@ interface ResourceSuggestionModalProps {
 
 type Stage = 'choice' | 'suggestion' | 'custom';
 
-// Si apre quando si tocca un task tipo "Leggi qualcosa di ispirazionale": invece di dare
-// per scontato che la persona sappia gia' cosa fare, offre subito un consiglio pronto
-// (curato, nessuna attesa), con la possibilita' di chiederne uno su misura all'IA solo se
-// l'argomento proposto non fa al caso suo.
+const CUSTOM_COPY: { [k in IdeaKind]: { question: string; placeholder: string } } = {
+  read: { question: 'Su quale argomento ti interessa un consiglio?', placeholder: 'es. ansia da lavoro, motivazione, autostima...' },
+  listen: { question: 'Su quale argomento ti interessa un consiglio?', placeholder: 'es. calma, motivazione, concentrazione...' },
+  try: { question: 'Che tipo di idea stai cercando?', placeholder: 'es. veloce, economica, da fare in casa...' },
+};
+
+const ICONS: { [k in IdeaKind]: string } = {
+  read: 'book-outline',
+  listen: 'headset-outline',
+  try: 'bulb-outline',
+};
+
+// Si apre quando si tocca un task in cui la persona potrebbe non sapere cosa fare ("Leggi
+// qualcosa di ispirazionale", "Prova una nuova ricetta", "Ascolta musica rilassante"...):
+// offre subito un'idea pronta e pertinente (archivio curato, nessuna attesa), con "un'altra
+// idea" per cambiare, e chiede all'IA solo se la persona vuole qualcosa di diverso.
 export default function ResourceSuggestionModal({
   visible,
   taskText,
@@ -33,6 +46,7 @@ export default function ResourceSuggestionModal({
   onSaveToDiary,
 }: ResourceSuggestionModalProps) {
   const [stage, setStage] = useState<Stage>('choice');
+  const [offset, setOffset] = useState(0);
   const [suggestion, setSuggestion] = useState<{ text: string; pointer?: string; fromAI: boolean } | null>(null);
   const [customTopic, setCustomTopic] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,15 +55,17 @@ export default function ResourceSuggestionModal({
   useEffect(() => {
     if (visible) {
       setStage('choice');
+      setOffset(0);
       setSuggestion(null);
       setCustomTopic('');
       setSaved(false);
     }
   }, [visible]);
 
-  const showCurated = () => {
-    const resource = getCuratedResource(area, seed);
-    setSuggestion({ text: resource.passage, pointer: resource.pointer, fromAI: false });
+  const showCurated = (nextOffset: number) => {
+    const idea = getIdea(taskText, area, seed + nextOffset);
+    setOffset(nextOffset);
+    setSuggestion({ text: idea.text, pointer: idea.pointer, fromAI: false });
     setSaved(false);
     setStage('suggestion');
   };
@@ -62,24 +78,22 @@ export default function ResourceSuggestionModal({
       const response = await fetch(`${API_URL}/api/suggest-resource`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, kind }),
+        body: JSON.stringify({ topic, kind, task: taskText }),
       });
       const data = await response.json();
       setSuggestion({ text: data.suggestion, fromAI: true });
-      setSaved(false);
-      setStage('suggestion');
     } catch (error) {
       setSuggestion({ text: 'Non riesco a collegarmi in questo momento. Riprova tra poco.', fromAI: true });
+    } finally {
       setSaved(false);
       setStage('suggestion');
-    } finally {
       setLoading(false);
     }
   };
 
   const handleSaveToDiary = () => {
     if (!suggestion) return;
-    onSaveToDiary(suggestion.text);
+    onSaveToDiary(suggestion.pointer ? `${suggestion.text} (${suggestion.pointer})` : suggestion.text);
     setSaved(true);
   };
 
@@ -88,7 +102,7 @@ export default function ResourceSuggestionModal({
       <View style={styles.overlay}>
         <ScrollView style={styles.card} contentContainerStyle={styles.cardContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Ionicons name={kind === 'read' ? 'book-outline' : 'headset-outline'} size={22} color="#7CB342" />
+            <Ionicons name={ICONS[kind] as any} size={22} color="#7CB342" />
             <Text style={styles.headerTitle}>{taskText}</Text>
             <Pressable onPress={onClose} hitSlop={8}>
               <Ionicons name="close" size={24} color="#999" />
@@ -98,7 +112,7 @@ export default function ResourceSuggestionModal({
           {stage === 'choice' && (
             <>
               <Text style={styles.question}>Hai già in mente cosa fare?</Text>
-              <Pressable style={styles.primaryButton} onPress={showCurated}>
+              <Pressable style={styles.primaryButton} onPress={() => showCurated(0)}>
                 <Ionicons name="bulb" size={18} color="#FFFFFF" />
                 <Text style={styles.primaryButtonText}>Dammi un'idea</Text>
               </Pressable>
@@ -110,11 +124,13 @@ export default function ResourceSuggestionModal({
 
           {stage === 'suggestion' && suggestion && (
             <>
-              {suggestion.fromAI && (
+              {suggestion.fromAI ? (
                 <View style={styles.aiTag}>
                   <Ionicons name="sparkles" size={14} color="#7CB342" />
                   <Text style={styles.aiTagText}>Suggerimento su misura</Text>
                 </View>
+              ) : (
+                <Text style={styles.ideaTitle}>{getIdeaTitle(taskText)}</Text>
               )}
               <Text style={styles.suggestionText}>{suggestion.text}</Text>
               {suggestion.pointer && (
@@ -128,21 +144,26 @@ export default function ResourceSuggestionModal({
                 <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
                 <Text style={styles.primaryButtonText}>Segna come fatto</Text>
               </Pressable>
+              {!suggestion.fromAI && (
+                <Pressable style={styles.secondaryButton} onPress={() => showCurated(offset + 1)}>
+                  <Text style={styles.secondaryButtonText}>Un'altra idea</Text>
+                </Pressable>
+              )}
               <Pressable style={styles.secondaryButton} onPress={handleSaveToDiary} disabled={saved}>
                 <Text style={styles.secondaryButtonText}>{saved ? 'Salvato nel diario ✓' : 'Salva nel diario'}</Text>
               </Pressable>
               <Pressable onPress={() => setStage('custom')}>
-                <Text style={styles.linkText}>...oppure scegli un argomento diverso</Text>
+                <Text style={styles.linkText}>...oppure chiedi qualcosa di diverso</Text>
               </Pressable>
             </>
           )}
 
           {stage === 'custom' && (
             <>
-              <Text style={styles.question}>Su quale argomento ti interessa un consiglio?</Text>
+              <Text style={styles.question}>{CUSTOM_COPY[kind].question}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="es. ansia da lavoro, motivazione, autostima..."
+                placeholder={CUSTOM_COPY[kind].placeholder}
                 value={customTopic}
                 onChangeText={setCustomTopic}
                 autoFocus
@@ -184,9 +205,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
   headerTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: '#4A4A4A' },
   question: { fontSize: 15, color: '#666', marginBottom: 16 },
+  ideaTitle: { fontSize: 12, fontWeight: '700', color: '#7CB342', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   suggestionText: { fontSize: 16, color: '#4A4A4A', lineHeight: 24, marginBottom: 12 },
   pointerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  pointerText: { fontSize: 13, color: '#7CB342', fontWeight: '500' },
+  pointerText: { flex: 1, fontSize: 13, color: '#7CB342', fontWeight: '600' },
   aiTag: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,7 +242,7 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.5 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  secondaryButton: { padding: 12, alignItems: 'center', marginBottom: 6 },
+  secondaryButton: { padding: 12, alignItems: 'center', marginBottom: 2 },
   secondaryButtonText: { color: '#7CB342', fontSize: 15, fontWeight: '500' },
-  linkText: { color: '#999', fontSize: 14, textAlign: 'center', textDecorationLine: 'underline' },
+  linkText: { color: '#999', fontSize: 14, textAlign: 'center', textDecorationLine: 'underline', marginTop: 4 },
 });

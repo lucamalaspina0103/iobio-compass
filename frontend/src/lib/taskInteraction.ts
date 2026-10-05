@@ -5,22 +5,43 @@
 // dimentica nella giornata. Qui riconosciamo questi task per offrire, nello stesso
 // momento in cui si tocca il task, un modo di soddisfarli subito, dentro l'app.
 
-export type TaskInteractionType = 'write' | 'resource' | null;
+import { IDEA_CATEGORIES, IDEAS, Idea, IdeaKind } from './ideaLibrary';
+
+export type TaskInteractionType = 'write' | 'idea' | null;
 
 // Word-boundary aware: "Scrivi" deve essere una parola intera, non un pezzo di un'altra
 // (es. "Descrivi" non deve far scattare il diario).
 const WRITE_PATTERN = /\b(scrivi|annota)\b/i;
-const READ_PATTERN = /\bleggi\b/i;
-const LISTEN_PATTERN = /\bascolta\s+un\s+podcast\b/i; // "ascolta musica" resta un tocco semplice
+
+// Task in cui la persona potrebbe non sapere cosa fare: l'app offre subito un'idea pronta
+// (vedi ideaLibrary.ts, un gruppo di idee per ogni tipo di task).
+export const getIdeaCategory = (taskText: string) =>
+  IDEA_CATEGORIES.find(c => c.pattern.test(taskText)) || null;
 
 export const getTaskInteractionType = (taskText: string): TaskInteractionType => {
   if (WRITE_PATTERN.test(taskText)) return 'write';
-  if (READ_PATTERN.test(taskText) || LISTEN_PATTERN.test(taskText)) return 'resource';
+  if (getIdeaCategory(taskText)) return 'idea';
   return null;
 };
 
-export const getResourceKind = (taskText: string): 'read' | 'listen' => {
-  return LISTEN_PATTERN.test(taskText) ? 'listen' : 'read';
+export const getResourceKind = (taskText: string): IdeaKind => {
+  return getIdeaCategory(taskText)?.kind || 'read';
+};
+
+export const getIdeaTitle = (taskText: string): string => {
+  return getIdeaCategory(taskText)?.title || "Un'idea per te";
+};
+
+// Idea numero `index` per questo task (cicla sulle idee disponibili). L'indice parte dal
+// giorno del piano e sale con "un'altra idea", cosi' non si ripete nello stesso mese.
+export const getIdea = (taskText: string, area: string, index: number): Idea => {
+  const category = getIdeaCategory(taskText);
+  const pool = category ? IDEAS[category.key] : null;
+  if (pool && pool.length > 0) {
+    return pool[((index % pool.length) + pool.length) % pool.length];
+  }
+  const fallback = getCuratedResource(area, index);
+  return { text: fallback.passage, pointer: fallback.pointer };
 };
 
 export interface CuratedResource {

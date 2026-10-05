@@ -120,7 +120,7 @@ export default function PianoScreen() {
     }
     const type = getTaskInteractionType(task.task);
     if (type === 'write') setWriteTask(task);
-    else if (type === 'resource') setResourceTask(task);
+    else if (type === 'idea') setResourceTask(task);
     else toggleTaskCompletion(task.id);
   };
 

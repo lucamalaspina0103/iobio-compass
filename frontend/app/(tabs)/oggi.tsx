@@ -177,7 +177,7 @@ export default function OggiScreen() {
     }
     const type = getTaskInteractionType(task.task);
     if (type === 'write') setWriteTask(task);
-    else if (type === 'resource') setResourceTask(task);
+    else if (type === 'idea') setResourceTask(task);
     else toggleTask(task.id, task.completed);
   };
 
