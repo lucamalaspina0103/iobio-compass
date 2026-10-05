@@ -422,10 +422,6 @@ export default function PianoScreen() {
           </View>
         )}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.buildLabel}>Build: PIANO-UNIFICATO-001</Text>
-        </View>
       </ScrollView>
 
       <DiaryEntryModal

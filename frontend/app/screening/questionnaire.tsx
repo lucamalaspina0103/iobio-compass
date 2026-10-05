@@ -46,9 +46,6 @@ class ErrorBoundary extends React.Component<
           <Text style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
             {this.state.error?.toString() || 'Unknown error'}
           </Text>
-          <Text style={{ fontSize: 12, color: '#999', marginTop: 16 }}>
-            Build: SCREENING-21-FIX-001
-          </Text>
         </SafeAreaView>
       );
     }
@@ -492,7 +489,6 @@ function QuestionnaireScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.buildLabel}>Build: SCREENING-21-FIX-001</Text>
     </SafeAreaView>
   );
 }

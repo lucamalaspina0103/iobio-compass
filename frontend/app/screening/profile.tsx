@@ -122,7 +122,6 @@ export default function ProfileScreen() {
             <Text style={styles.skipButtonText}>Salta per ora</Text>
           </TouchableOpacity>
 
-          <Text style={styles.buildLabel}>Build: PROFILE-001</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

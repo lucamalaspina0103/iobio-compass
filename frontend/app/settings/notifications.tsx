@@ -1,69 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  NotificationSettings,
+  DEFAULT_NOTIFICATION_SETTINGS,
+  REMINDER_TIME_OPTIONS,
+  PAUSE_DAYS,
+  loadNotificationSettings,
+  saveNotificationSettings,
+  isPaused,
+} from '../../src/lib/notificationSettings';
 
-const STORAGE_KEY = 'iobio_notification_settings';
-
-interface NotificationSettings {
-  dailyReminder: boolean;
-  checkinReminder: boolean;
-  pianoReminder: boolean;
-  soundSuggestions: boolean;
-}
-
-const DEFAULT_SETTINGS: NotificationSettings = {
-  dailyReminder: true,
-  checkinReminder: true,
-  pianoReminder: true,
-  soundSuggestions: false,
-};
-
-const OPTIONS: { key: keyof NotificationSettings; icon: string; title: string; desc: string }[] = [
-  { key: 'dailyReminder', icon: 'sunny', title: 'Promemoria giornaliero', desc: 'Ricevi un promemoria ogni mattina' },
-  { key: 'checkinReminder', icon: 'heart', title: 'Promemoria check-in', desc: 'Ti ricordiamo di registrare come stai' },
-  { key: 'pianoReminder', icon: 'calendar', title: 'Piano 30 giorni', desc: 'Non perdere le micro-abitudini del giorno' },
-  { key: 'soundSuggestions', icon: 'musical-notes', title: 'Suggerimenti Suoni', desc: 'Consigli su sessioni di suoni binaurali' },
-];
+const TRACK = { false: '#E0E0E0', true: '#AED581' };
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
-        }
-      } catch (e) {
-        console.error('Error loading notification settings:', e);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadNotificationSettings().then(s => {
+      setSettings(s);
+      setLoading(false);
+    });
   }, []);
 
-  const toggle = async (key: keyof NotificationSettings) => {
-    const next = { ...settings, [key]: !settings[key] };
+  const update = (patch: Partial<NotificationSettings>) => {
+    const next = { ...settings, ...patch };
     setSettings(next);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.error('Error saving notification settings:', e);
-    }
+    saveNotificationSettings(next);
+  };
+
+  const paused = isPaused(settings);
+  const pausedLabel = settings.pausedUntil
+    ? new Date(settings.pausedUntil).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })
+    : '';
+
+  const pauseForAWeek = () => {
+    const until = new Date(Date.now() + PAUSE_DAYS * 24 * 60 * 60 * 1000);
+    update({ pausedUntil: until.toISOString() });
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={styles.headerTitle}>Notifiche</Text>
         <View style={styles.backButton} />
       </View>
@@ -75,33 +60,130 @@ export default function NotificationsScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.intro}>
-            Gestisci quali promemoria vuoi ricevere per mantenere le tue abitudini di benessere.
+            Poche notifiche, gentili. Al massimo una al giorno, mai di notte, e mai se la tua parte di oggi è già fatta.
           </Text>
 
-          {OPTIONS.map((opt) => (
-            <View key={opt.key} style={styles.card}>
-              <View style={styles.iconContainer}>
-                <Ionicons name={opt.icon as any} size={22} color="#7CB342" />
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.cardTitle}>{opt.title}</Text>
-                <Text style={styles.cardDesc}>{opt.desc}</Text>
-              </View>
-              <Switch
-                value={settings[opt.key]}
-                onValueChange={() => toggle(opt.key)}
-                trackColor={{ false: '#E0E0E0', true: '#AED581' }}
-                thumbColor={settings[opt.key] ? '#7CB342' : '#f4f3f4'}
-              />
-            </View>
-          ))}
-
-          <View style={styles.noteBox}>
-            <Ionicons name="information-circle" size={20} color="#F57C00" />
-            <Text style={styles.noteText}>
-              Le notifiche push richiedono un dispositivo reale e una build dell'app. Le preferenze vengono salvate localmente.
+          <View style={styles.soonBox}>
+            <Ionicons name="time-outline" size={20} color="#7CB342" />
+            <Text style={styles.soonText}>
+              I promemoria arriveranno con l'app per telefono (non sul sito web). Le tue scelte sono già salvate e verranno applicate appena disponibili.
             </Text>
           </View>
+
+          <View style={styles.card}>
+            <View style={styles.cardTextWrap}>
+              <Text style={styles.cardTitle}>Ricevi notifiche</Text>
+              <Text style={styles.cardDesc}>Interruttore generale</Text>
+            </View>
+            <Switch
+              value={settings.enabled}
+              onValueChange={v => update({ enabled: v })}
+              trackColor={TRACK}
+              thumbColor={settings.enabled ? '#7CB342' : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={[styles.group, !settings.enabled && styles.groupDisabled]} pointerEvents={settings.enabled ? 'auto' : 'none'}>
+            <View style={styles.card}>
+              <View style={styles.iconWrap}>
+                <Ionicons name="sunny" size={22} color="#7CB342" />
+              </View>
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Il tuo momento</Text>
+                <Text style={styles.cardDesc}>Un promemoria al giorno, solo se non hai ancora fatto la tua parte.</Text>
+              </View>
+              <Switch
+                value={settings.dailyMoment}
+                onValueChange={v => update({ dailyMoment: v })}
+                trackColor={TRACK}
+                thumbColor={settings.dailyMoment ? '#7CB342' : '#f4f3f4'}
+              />
+            </View>
+
+            {settings.dailyMoment && (
+              <View style={styles.timeCard}>
+                <Text style={styles.timeLabel}>A che ora preferisci?</Text>
+                <View style={styles.timeRow}>
+                  {REMINDER_TIME_OPTIONS.map(opt => {
+                    const selected = settings.reminderTime === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        style={[styles.timeChip, selected && styles.timeChipSelected]}
+                        onPress={() => update({ reminderTime: opt.value })}
+                      >
+                        <Text style={[styles.timeChipText, selected && styles.timeChipTextSelected]}>{opt.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.card}>
+              <View style={styles.iconWrap}>
+                <Ionicons name="hand-left" size={22} color="#7CB342" />
+              </View>
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Ti aspetto, senza fretta</Text>
+                <Text style={styles.cardDesc}>
+                  Se manchi per qualche giorno ti scrivo pochissimo (dopo 3, 7 e 14 giorni). Poi mi fermo finché non torni tu.
+                </Text>
+              </View>
+              <Switch
+                value={settings.comeback}
+                onValueChange={v => update({ comeback: v })}
+                trackColor={TRACK}
+                thumbColor={settings.comeback ? '#7CB342' : '#f4f3f4'}
+              />
+            </View>
+
+            <View style={styles.card}>
+              <View style={styles.iconWrap}>
+                <Ionicons name="ribbon" size={22} color="#7CB342" />
+              </View>
+              <View style={styles.cardTextWrap}>
+                <Text style={styles.cardTitle}>Momenti importanti</Text>
+                <Text style={styles.cardDesc}>
+                  Il riepilogo della settimana, i traguardi e la fine del ciclo. Al massimo una volta a settimana.
+                </Text>
+              </View>
+              <Switch
+                value={settings.milestones}
+                onValueChange={v => update({ milestones: v })}
+                trackColor={TRACK}
+                thumbColor={settings.milestones ? '#7CB342' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+
+          {settings.enabled && (
+            <View style={styles.pauseCard}>
+              {paused ? (
+                <>
+                  <Text style={styles.pauseText}>Notifiche in pausa fino al {pausedLabel}.</Text>
+                  <Pressable onPress={() => update({ pausedUntil: null })}>
+                    <Text style={styles.pauseAction}>Riattiva ora</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.pauseText}>Ti serve una pausa?</Text>
+                  <Pressable onPress={pauseForAWeek}>
+                    <Text style={styles.pauseAction}>Silenzia per {PAUSE_DAYS} giorni</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          )}
+
+          <Text style={styles.footerNote}>
+            {!settings.enabled
+              ? 'Le notifiche sono spente: nessun promemoria, nessun problema. Puoi riaccenderle quando vuoi.'
+              : paused
+              ? 'In pausa: riprenderanno da sole dopo la data indicata, oppure puoi riattivarle subito.'
+              : 'Puoi cambiare queste scelte quando vuoi.'}
+          </Text>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -118,42 +200,73 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#4A4A4A' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#4A4A4A' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: 24 },
-  intro: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 20 },
+  content: { padding: 20, paddingBottom: 40 },
+  intro: { fontSize: 15, color: '#666', lineHeight: 22, marginBottom: 16 },
+  soonBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  soonText: { flex: 1, fontSize: 13, color: '#4A4A4A', lineHeight: 19 },
+  group: { gap: 0 },
+  groupDisabled: { opacity: 0.45 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 12,
   },
-  iconContainer: {
+  iconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: '#E8F5E9',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  textContainer: { flex: 1, marginRight: 8 },
-  cardTitle: { fontSize: 16, color: '#4A4A4A', fontWeight: '500' },
-  cardDesc: { fontSize: 13, color: '#999', marginTop: 2 },
-  noteBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF8E1',
-    borderRadius: 12,
+  cardTextWrap: { flex: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '600', color: '#4A4A4A', marginBottom: 2 },
+  cardDesc: { fontSize: 13, color: '#888', lineHeight: 18 },
+  timeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     padding: 16,
-    marginTop: 12,
-    alignItems: 'flex-start',
+    marginTop: -4,
+    marginBottom: 10,
   },
-  noteText: { flex: 1, fontSize: 13, color: '#8D6E63', marginLeft: 10, lineHeight: 19 },
+  timeLabel: { fontSize: 13, color: '#666', marginBottom: 10 },
+  timeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timeChip: {
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  timeChipSelected: { borderColor: '#7CB342', backgroundColor: '#E8F5E9' },
+  timeChipText: { fontSize: 14, color: '#666', fontWeight: '500' },
+  timeChipTextSelected: { color: '#7CB342', fontWeight: '700' },
+  pauseCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  pauseText: { flex: 1, fontSize: 14, color: '#4A4A4A' },
+  pauseAction: { fontSize: 14, color: '#7CB342', fontWeight: '600' },
+  footerNote: { fontSize: 13, color: '#999', textAlign: 'center', lineHeight: 19 },
 });
