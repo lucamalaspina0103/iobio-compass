@@ -13,11 +13,11 @@ export const parseDate = (value: string): number => {
   return new Date(hasZone ? value : value + 'Z').getTime();
 };
 
-// Giorni passati dall'ultimo screening (completo o rapido); null se non ce n'e' nessuno.
-export const getDaysSinceLastScreening = async (
+// Data (ISO) dell'ultimo screening, completo o rapido; null se non ce n'e' nessuno.
+export const getLastScreeningISO = async (
   isGuest: boolean,
   userId?: string | null
-): Promise<number | null> => {
+): Promise<string | null> => {
   let dates: string[] = (await loadLocalScreeningHistory()).map(e => e.date);
   if (dates.length === 0 && !isGuest && userId) {
     try {
@@ -26,11 +26,19 @@ export const getDaysSinceLastScreening = async (
       console.error('Error reading screening history for check due:', error);
     }
   }
-  if (dates.length === 0) return null;
-  const last = Math.max(...dates.map(parseDate).filter(t => !isNaN(t)));
-  if (!isFinite(last)) return null;
-  return Math.max(0, Math.floor((Date.now() - last) / (24 * 60 * 60 * 1000)));
+  const times = dates.map(parseDate).filter(t => !isNaN(t));
+  if (times.length === 0) return null;
+  return new Date(Math.max(...times)).toISOString();
 };
+
+export const daysSince = (iso: string | null): number | null =>
+  iso ? Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000))) : null;
+
+// Giorni passati dall'ultimo screening (completo o rapido); null se non ce n'e' nessuno.
+export const getDaysSinceLastScreening = async (
+  isGuest: boolean,
+  userId?: string | null
+): Promise<number | null> => daysSince(await getLastScreeningISO(isGuest, userId));
 
 export const isCheckDue = (daysSince: number | null, elapsedDays: number | null): boolean =>
   daysSince !== null &&

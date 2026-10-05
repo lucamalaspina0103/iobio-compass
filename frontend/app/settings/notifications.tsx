@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -12,6 +12,12 @@ import {
   saveNotificationSettings,
   isPaused,
 } from '../../src/lib/notificationSettings';
+import {
+  PermissionState,
+  getPermissionState,
+  requestPermission,
+  syncNotifications,
+} from '../../src/lib/notificationsNative';
 
 const TRACK = { false: '#E0E0E0', true: '#AED581' };
 
@@ -19,18 +25,27 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const [permission, setPermission] = useState<PermissionState>('unsupported');
 
   useEffect(() => {
     loadNotificationSettings().then(s => {
       setSettings(s);
       setLoading(false);
     });
+    getPermissionState().then(setPermission);
   }, []);
 
   const update = (patch: Partial<NotificationSettings>) => {
     const next = { ...settings, ...patch };
     setSettings(next);
-    saveNotificationSettings(next);
+    // Salva e poi riprogramma le notifiche con le nuove scelte (sul sito web non fa nulla)
+    saveNotificationSettings(next).then(() => syncNotifications());
+  };
+
+  const askPermission = async () => {
+    await requestPermission();
+    setPermission(await getPermissionState());
+    syncNotifications();
   };
 
   const paused = isPaused(settings);
@@ -63,12 +78,40 @@ export default function NotificationsScreen() {
             Poche notifiche, gentili. Al massimo una al giorno, mai di notte, e mai se la tua parte di oggi è già fatta.
           </Text>
 
-          <View style={styles.soonBox}>
-            <Ionicons name="time-outline" size={20} color="#7CB342" />
-            <Text style={styles.soonText}>
-              I promemoria arriveranno con l'app per telefono (non sul sito web). Le tue scelte sono già salvate e verranno applicate appena disponibili.
-            </Text>
-          </View>
+          {permission === 'unsupported' && (
+            <View style={styles.soonBox}>
+              <Ionicons name="time-outline" size={20} color="#7CB342" />
+              <Text style={styles.soonText}>
+                I promemoria arriveranno con l'app per telefono (non sul sito web). Le tue scelte sono già salvate e verranno applicate appena disponibili.
+              </Text>
+            </View>
+          )}
+          {permission === 'granted' && (
+            <View style={styles.soonBox}>
+              <Ionicons name="checkmark-circle" size={20} color="#7CB342" />
+              <Text style={styles.soonText}>Le notifiche sono attive su questo telefono.</Text>
+            </View>
+          )}
+          {permission === 'undetermined' && (
+            <View style={styles.soonBox}>
+              <Ionicons name="notifications-outline" size={20} color="#7CB342" />
+              <Text style={styles.soonText}>Per ricevere i promemoria serve il tuo permesso.</Text>
+              <Pressable onPress={askPermission}>
+                <Text style={styles.pauseAction}>Consenti</Text>
+              </Pressable>
+            </View>
+          )}
+          {permission === 'denied' && (
+            <View style={styles.soonBox}>
+              <Ionicons name="notifications-off-outline" size={20} color="#F57C00" />
+              <Text style={styles.soonText}>
+                Hai bloccato le notifiche per questa app. Puoi riattivarle dalle impostazioni del telefono.
+              </Text>
+              <Pressable onPress={() => Linking.openSettings()}>
+                <Text style={styles.pauseAction}>Apri impostazioni</Text>
+              </Pressable>
+            </View>
+          )}
 
           <View style={styles.card}>
             <View style={styles.cardTextWrap}>

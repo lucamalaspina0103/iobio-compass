@@ -17,6 +17,8 @@ import {
   getWeeklySummary,
   syncStartDateFromServer,
   getElapsedDays,
+  isDaySucceeded,
+  PIANO_START_DATE_KEY,
 } from '../../src/lib/pianoPlan';
 import {
   CycleNoticeKind,
@@ -25,7 +27,14 @@ import {
   dismissNotice,
 } from '../../src/lib/cycleNotices';
 import CycleNotice from '../../src/components/CycleNotice';
-import { getDaysSinceLastScreening, isCheckDue } from '../../src/lib/checkDue';
+import { getDaysSinceLastScreening, getLastScreeningISO, isCheckDue } from '../../src/lib/checkDue';
+import NotificationPrompt from '../../src/components/NotificationPrompt';
+import {
+  notificationsSupported,
+  saveSnapshot,
+  syncNotifications,
+  shouldAskPermission,
+} from '../../src/lib/notificationsNative';
 import { getBankedStars } from '../../src/lib/rescreen';
 import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
 import {
@@ -64,6 +73,7 @@ export default function OggiScreen() {
   const [celebrated, setCelebrated] = useState<number[]>([]);
   const [celebratedLoaded, setCelebratedLoaded] = useState(false);
   const [celebration, setCelebration] = useState<number | null>(null);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
   const [elapsedDays, setElapsedDays] = useState<number | null>(null);
   const [daysSinceCheck, setDaysSinceCheck] = useState<number | null>(null); // giorni dall'ultimo screening
@@ -258,6 +268,36 @@ export default function OggiScreen() {
   const streaks = computeStreaks(allTasks, currentDay);
   const stars = computeStars(allTasks, streaks.best, currentDay);
   const dayStars = getDayStars(todayTasks);
+
+  // Notifiche gentili (solo app per telefono): aggiorna cio' che il motore sa di te e
+  // riprogramma la sequenza. Ad ogni apertura e ad ogni cambio, cosi' non restano
+  // promemoria vecchi (es. quello di oggi se la tua parte e' gia' fatta).
+  useEffect(() => {
+    if (!notificationsSupported || allTasks.length === 0) return;
+    (async () => {
+      try {
+        const succeededDays: number[] = [];
+        for (let d = 1; d <= Math.min(currentDay, 30); d++) {
+          const dayTasks = allTasks.filter(t => t.day === d);
+          if (dayTasks.length > 0 && isDaySucceeded(d, dayTasks)) succeededDays.push(d);
+        }
+        await saveSnapshot({
+          planStart: await AsyncStorage.getItem(PIANO_START_DATE_KEY),
+          succeededDays,
+          stars: stars.total + bankedStars,
+          lastScreening: await getLastScreeningISO(isGuest || !user?.id, user?.id),
+          savedAt: new Date().toISOString(),
+        });
+        await syncNotifications();
+        // Il permesso si chiede solo dopo la prima giornata riuscita, mai prima
+        if (!showCheckin && !showReflection && celebration === null && (await shouldAskPermission(succeededDays.length > 0))) {
+          setShowNotifPrompt(true);
+        }
+      } catch (error) {
+        console.error('Error syncing notifications from Oggi:', error);
+      }
+    })();
+  }, [allTasks, currentDay, bankedStars, daysSinceCheck]);
 
   // Avvisi non bloccanti: Guest (salva i progressi) e fine ciclo
   const isGuestMode = isGuest || !user?.id;
@@ -662,6 +702,8 @@ export default function OggiScreen() {
           )}
         </View>
       </Modal>
+
+      <NotificationPrompt visible={showNotifPrompt} onClose={() => setShowNotifPrompt(false)} />
 
       <DiaryEntryModal
         visible={!!writeTask}
