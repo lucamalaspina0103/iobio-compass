@@ -17,12 +17,14 @@ import {
 } from '../src/lib/diary';
 import { getAreaInfo } from '../src/lib/pianoPlan';
 import DiaryEntryModal from '../src/components/DiaryEntryModal';
+import { useI18n } from '../src/i18n';
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+const formatDate = (iso: string, locale: string) =>
+  new Date(iso).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 
 export default function DiarioScreen() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const { user, isGuest, isBootstrapped } = useAppContext();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function DiarioScreen() {
       setAdding(false);
       loadEntries();
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile salvare la voce');
+      Alert.alert(t('common.error'), t('diary.errSave'));
     }
   };
 
@@ -74,7 +76,7 @@ export default function DiarioScreen() {
       setEditing(null);
       loadEntries();
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile aggiornare la voce');
+      Alert.alert(t('common.error'), t('diary.errUpdate'));
     }
   };
 
@@ -89,7 +91,7 @@ export default function DiarioScreen() {
       setEditing(null);
       loadEntries();
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile eliminare la voce');
+      Alert.alert(t('common.error'), t('diary.errDelete'));
     }
   };
 
@@ -99,7 +101,7 @@ export default function DiarioScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
         </Pressable>
-        <Text style={styles.headerTitle}>Il tuo diario</Text>
+        <Text style={styles.headerTitle}>{t('oggi.diaryTitle')}</Text>
         <Pressable onPress={() => setAdding(true)} style={styles.addButton}>
           <Ionicons name="add" size={26} color="#557A6D" />
         </Pressable>
@@ -114,12 +116,10 @@ export default function DiarioScreen() {
           {entries.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="book-outline" size={64} color="#E0E0E0" />
-              <Text style={styles.emptyTitle}>Il diario è vuoto</Text>
-              <Text style={styles.emptyText}>
-                Le tue riflessioni dai task del piano (o quelle scritte liberamente) appariranno qui.
-              </Text>
+              <Text style={styles.emptyTitle}>{t('diary.empty')}</Text>
+              <Text style={styles.emptyText}>{t('diary.emptyText')}</Text>
               <Pressable style={styles.emptyButton} onPress={() => setAdding(true)}>
-                <Text style={styles.emptyButtonText}>Scrivi la prima voce</Text>
+                <Text style={styles.emptyButtonText}>{t('diary.first')}</Text>
               </Pressable>
             </View>
           ) : (
@@ -128,7 +128,7 @@ export default function DiarioScreen() {
               return (
                 <Pressable key={entry.id} style={styles.entryCard} onPress={() => setEditing(entry)}>
                   <View style={styles.entryHeader}>
-                    <Text style={styles.entryDate}>{formatDate(entry.date)}</Text>
+                    <Text style={styles.entryDate}>{formatDate(entry.date, locale)}</Text>
                     {info && (
                       <View style={[styles.areaTag, { backgroundColor: info.color + '20' }]}>
                         <Text style={[styles.areaTagText, { color: info.color }]}>{info.name}</Text>

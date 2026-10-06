@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, LayoutAn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useI18n } from '../../src/i18n';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -10,31 +11,12 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const SUPPORT_EMAIL = 'supporto@iobiocompass.it';
 
-const FAQS: { q: string; a: string }[] = [
-  {
-    q: 'Che cos\'è l\'Indice IOBIO?',
-    a: 'È un punteggio complessivo (0-100) calcolato dallo screening che riflette il tuo stato di benessere olistico attuale in diverse aree della vita.',
-  },
-  {
-    q: 'Come funziona il Piano 30 giorni?',
-    a: 'In base alle tue aree più deboli, generiamo micro-abitudini quotidiane semplici da completare. Ogni giorno spunti le attività per costruire nuove abitudini nel tempo.',
-  },
-  {
-    q: 'Cosa sono i suoni binaurali?',
-    a: 'Sono frequenze audio che possono aiutare rilassamento, concentrazione o sonno. Usali con le cuffie per un\'esperienza ottimale nella tab Suoni.',
-  },
-  {
-    q: 'I miei dati sono al sicuro?',
-    a: 'Sì. I tuoi dati sono privati e non vengono condivisi con terze parti. In modalità Guest i dati restano solo sul tuo dispositivo.',
-  },
-  {
-    q: 'Posso rifare lo screening?',
-    a: 'Certo! Vai su Profilo → "Rifai lo screening" per aggiornare il tuo profilo e generare un nuovo piano.',
-  },
-];
+// Le domande e risposte sono nei cataloghi (support.q1..q5 / support.a1..a5)
+const FAQ_COUNT = 5;
 
 export default function SupportScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleFaq = (i: number) => {
@@ -43,7 +25,7 @@ export default function SupportScreen() {
   };
 
   const contactEmail = () => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Supporto IOBIO`);
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t('support.subject'))}`);
   };
 
   return (
@@ -52,7 +34,7 @@ export default function SupportScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Aiuto e supporto</Text>
+        <Text style={styles.headerTitle}>{t('pf.support')}</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -61,12 +43,12 @@ export default function SupportScreen() {
           <View style={styles.heroIcon}>
             <Ionicons name="help-buoy" size={40} color="#557A6D" />
           </View>
-          <Text style={styles.heroText}>Come possiamo aiutarti?</Text>
+          <Text style={styles.heroText}>{t('support.hero')}</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Domande frequenti</Text>
+        <Text style={styles.sectionTitle}>{t('support.faq')}</Text>
 
-        {FAQS.map((faq, i) => (
+        {Array.from({ length: FAQ_COUNT }, (_, k) => ({ q: t(`support.q${k + 1}`), a: t(`support.a${k + 1}`) })).map((faq, i) => (
           <TouchableOpacity
             key={i}
             style={styles.faqCard}
@@ -85,14 +67,14 @@ export default function SupportScreen() {
           </TouchableOpacity>
         ))}
 
-        <Text style={styles.sectionTitle}>Contattaci</Text>
+        <Text style={styles.sectionTitle}>{t('support.contact')}</Text>
 
         <TouchableOpacity style={styles.contactCard} onPress={contactEmail}>
           <View style={styles.iconContainer}>
             <Ionicons name="mail" size={22} color="#557A6D" />
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.cardTitle}>Scrivici via email</Text>
+            <Text style={styles.cardTitle}>{t('support.emailUs')}</Text>
             <Text style={styles.cardDesc}>{SUPPORT_EMAIL}</Text>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#999" />
@@ -101,7 +83,7 @@ export default function SupportScreen() {
         <View style={styles.noteBox}>
           <Ionicons name="information-circle" size={20} color="#F57C00" />
           <Text style={styles.noteText}>
-            IOBIO è uno strumento di benessere e non sostituisce il parere di un medico o professionista sanitario.
+            {t('support.note')}
           </Text>
         </View>
       </ScrollView>

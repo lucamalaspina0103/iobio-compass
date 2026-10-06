@@ -8,11 +8,15 @@ import { tasks2 } from './tasks2';
 import { oggi } from './oggi';
 import { notices } from './notices';
 import { ideas } from './ideas';
+import { plan } from './plan';
+import { profilo } from './profilo';
+import { sounds } from './sounds';
+import { misc } from './misc';
 
 // Ogni file raggruppa le frasi di una zona dell'app, con le cinque lingue affiancate.
 export type Messages = Record<LangCode, Dict>;
 
-const PARTS: Messages[] = [base, auth, questionnaire, results, tasks1, tasks2, oggi, notices, ideas];
+const PARTS: Messages[] = [base, auth, questionnaire, results, tasks1, tasks2, oggi, notices, ideas, plan, profilo, sounds, misc];
 
 export const MESSAGES: Messages = { it: {}, en: {}, fr: {}, es: {}, de: {} };
 for (const part of PARTS) {

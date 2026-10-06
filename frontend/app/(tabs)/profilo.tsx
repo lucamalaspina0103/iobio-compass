@@ -19,7 +19,7 @@ export default function ProfiloScreen() {
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const isVeteran = useIsVeteran();
-  const { t, language } = useI18n();
+  const { t, language, locale } = useI18n();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showGuestGateModal, setShowGuestGateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -48,7 +48,7 @@ export default function ProfiloScreen() {
   const confirmDeleteAccount = async () => {
     if (!user?.email) return;
     if (!deletePassword) {
-      setDeleteError('Inserisci la tua password per confermare.');
+      setDeleteError(t('pf.errDeletePw'));
       return;
     }
     setDeleting(true);
@@ -61,14 +61,14 @@ export default function ProfiloScreen() {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        setDeleteError(typeof data?.detail === 'string' ? data.detail : "Non è stato possibile eliminare l'account, riprova.");
+        setDeleteError(typeof data?.detail === 'string' ? data.detail : t('pf.errDelete'));
         return;
       }
       setShowDeleteModal(false);
       await logout();
       router.replace('/onboarding/welcome');
     } catch (error) {
-      setDeleteError('Non riesco a collegarmi al server. Controlla la connessione e riprova.');
+      setDeleteError(t('pf.errConnect'));
     } finally {
       setDeleting(false);
     }
@@ -125,7 +125,7 @@ export default function ProfiloScreen() {
       router.replace('/onboarding/welcome');
     } catch (error) {
       console.error('Error resetting app:', error);
-      Alert.alert('Errore', 'Impossibile resettare l\'app');
+      Alert.alert(t('common.error'), t('pf.resetErr'));
     }
   };
 
@@ -138,11 +138,11 @@ export default function ProfiloScreen() {
               <Ionicons name="person" size={48} color="#557A6D" />
             </View>
             <Text style={styles.userName}>
-              {isGuest ? 'Utente Guest' : user?.email}
+              {isGuest ? t('pf.guestUser') : user?.email}
             </Text>
             {isGuest && (
               <View style={styles.guestBadge}>
-                <Text style={styles.guestBadgeText}>Modalità Guest</Text>
+                <Text style={styles.guestBadgeText}>{t('pf.guestMode')}</Text>
               </View>
             )}
           </View>
@@ -153,9 +153,9 @@ export default function ProfiloScreen() {
                 <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
               </View>
               <View style={styles.saveTextWrap}>
-                <Text style={styles.saveTitle}>Salva i tuoi progressi</Text>
+                <Text style={styles.saveTitle}>{t('pf.saveTitle')}</Text>
                 <Text style={styles.saveText}>
-                  Crea un account gratuito: piano, stelle e storico restano al sicuro.
+                  {t('pf.saveText')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color="#557A6D" />
@@ -164,29 +164,29 @@ export default function ProfiloScreen() {
 
           {screeningResult && (
             <View style={styles.statsCard}>
-              <Text style={styles.statsTitle}>Le tue statistiche</Text>
+              <Text style={styles.statsTitle}>{t('pf.statsTitle')}</Text>
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{screeningResult.indice_iobio}</Text>
-                  <Text style={styles.statLabel}>Indice IOBIO</Text>
+                  <Text style={styles.statLabel}>{t('results.index')}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statValue}>{screeningResult.weak_areas.length}</Text>
-                  <Text style={styles.statLabel}>Aree da migliorare</Text>
+                  <Text style={styles.statLabel}>{t('pf.areasToImprove')}</Text>
                 </View>
               </View>
             </View>
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Benessere</Text>
+            <Text style={styles.sectionTitle}>{t('pf.wellbeing')}</Text>
             
             <Pressable style={styles.menuItem} onPress={handleRetakeScreening}>
               <View style={styles.menuIconContainer}>
                 <Ionicons name="clipboard" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Rifai lo screening</Text>
+              <Text style={styles.menuText}>{t('pf.retake')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
@@ -194,7 +194,7 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="pulse" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>{isVeteran ? 'Revisione del mese (5 minuti)' : 'Controllo rapido (2 minuti)'}</Text>
+              <Text style={styles.menuText}>{isVeteran ? t('pf.review') : t('pf.quick')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
@@ -208,7 +208,7 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="calendar" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Piano 30 giorni</Text>
+              <Text style={styles.menuText}>{t('piano.title')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
@@ -219,7 +219,7 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="trending-up" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Progressi</Text>
+              <Text style={styles.menuText}>{t('pf.progress')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
@@ -230,13 +230,13 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="book" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Il tuo diario</Text>
+              <Text style={styles.menuText}>{t('oggi.diaryTitle')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Impostazioni</Text>
+            <Text style={styles.sectionTitle}>{t('pf.settings')}</Text>
 
             <Pressable style={styles.menuItem} onPress={() => setShowLanguageModal(true)}>
               <View style={styles.menuIconContainer}>
@@ -254,7 +254,7 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="notifications" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Notifiche</Text>
+              <Text style={styles.menuText}>{t('pf.notifications')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
@@ -265,7 +265,7 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="lock-closed" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Privacy</Text>
+              <Text style={styles.menuText}>{t('pf.privacy')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 
@@ -276,25 +276,25 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="help-circle" size={24} color="#557A6D" />
               </View>
-              <Text style={styles.menuText}>Aiuto e supporto</Text>
+              <Text style={styles.menuText}>{t('pf.support')}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Info</Text>
+            <Text style={styles.sectionTitle}>{t('pf.info')}</Text>
             
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Versione</Text>
+              <Text style={styles.infoLabel}>{t('pf.version')}</Text>
               <Text style={styles.infoValue}>1.0.0</Text>
             </View>
 
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Data screening</Text>
+              <Text style={styles.infoLabel}>{t('pf.screeningDate')}</Text>
               <Text style={styles.infoValue}>
                 {screeningResult 
-                  ? new Date(screeningResult.date).toLocaleDateString('it-IT')
-                  : 'Non disponibile'
+                  ? new Date(screeningResult.date).toLocaleDateString(locale)
+                  : t('pf.notAvailable')
                 }
               </Text>
             </View>
@@ -305,24 +305,24 @@ export default function ProfiloScreen() {
             onPress={() => setShowResetModal(true)}
           >
             <Ionicons name="refresh-circle" size={24} color="#FF9800" />
-            <Text style={styles.resetText}>Reset app (riparti da zero)</Text>
+            <Text style={styles.resetText}>{t('pf.reset')}</Text>
           </Pressable>
 
           <Pressable style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out" size={24} color="#EF5350" />
-            <Text style={styles.logoutText}>Esci</Text>
+            <Text style={styles.logoutText}>{t('pf.logout')}</Text>
           </Pressable>
 
           {!isGuest && (
             <Pressable style={styles.deleteAccountLink} onPress={openDeleteModal}>
-              <Text style={styles.deleteAccountText}>Elimina il mio account</Text>
+              <Text style={styles.deleteAccountText}>{t('pf.deleteAccount')}</Text>
             </Pressable>
           )}
 
           <View style={styles.footer}>
             <Ionicons name="leaf" size={24} color="#557A6D" />
             <Text style={styles.footerText}>IOBIO</Text>
-            <Text style={styles.footerSubtext}>Benessere Olistico</Text>
+            <Text style={styles.footerSubtext}>{t('brand.tagline')}</Text>
           </View>
         </View>
       </ScrollView>
@@ -338,22 +338,20 @@ export default function ProfiloScreen() {
             <View style={styles.modalIcon}>
               <Ionicons name="clipboard" size={48} color="#557A6D" />
             </View>
-            <Text style={styles.modalTitle}>Rifai lo screening</Text>
-            <Text style={styles.modalText}>
-              Vuoi rifare lo screening per aggiornare il tuo profilo?
-            </Text>
+            <Text style={styles.modalTitle}>{t('pf.retake')}</Text>
+            <Text style={styles.modalText}>{t('pf.retakeText')}</Text>
             <View style={styles.modalButtons}>
               <Pressable
                 style={styles.modalButtonCancel}
                 onPress={() => setShowRetakeModal(false)}
               >
-                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                <Text style={styles.modalButtonCancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={styles.modalButtonConfirm}
                 onPress={confirmRetakeScreening}
               >
-                <Text style={styles.modalButtonConfirmText}>Continua</Text>
+                <Text style={styles.modalButtonConfirmText}>{t('common.continue')}</Text>
               </Pressable>
             </View>
           </View>
@@ -371,14 +369,11 @@ export default function ProfiloScreen() {
             <View style={styles.modalIcon}>
               <Ionicons name="ribbon" size={48} color="#FF9800" />
             </View>
-            <Text style={styles.modalTitle}>Per il prossimo ciclo serve un account</Text>
-            <Text style={styles.modalText}>
-              Hai completato il tuo primo mese, complimenti! Per iniziare il ciclo successivo e tenere
-              al sicuro le tue stelle, crea un account gratuito: porti con te tutto il percorso.
-            </Text>
+            <Text style={styles.modalTitle}>{t('pf.gateTitle')}</Text>
+            <Text style={styles.modalText}>{t('pf.gateText')}</Text>
             <View style={styles.modalButtons}>
               <Pressable style={styles.modalButtonCancel} onPress={() => setShowGuestGateModal(false)}>
-                <Text style={styles.modalButtonCancelText}>Più tardi</Text>
+                <Text style={styles.modalButtonCancelText}>{t('common.later')}</Text>
               </Pressable>
               <Pressable
                 style={styles.modalButtonConfirm}
@@ -387,7 +382,7 @@ export default function ProfiloScreen() {
                   router.push('/salva-progressi');
                 }}
               >
-                <Text style={styles.modalButtonConfirmText}>Crea account</Text>
+                <Text style={styles.modalButtonConfirmText}>{t('pf.createAccount')}</Text>
               </Pressable>
             </View>
           </View>
@@ -407,23 +402,21 @@ export default function ProfiloScreen() {
             <View style={styles.modalIcon}>
               <Ionicons name={isGuest ? 'warning' : 'log-out'} size={48} color="#FF9800" />
             </View>
-            <Text style={styles.modalTitle}>{isGuest ? 'Aspetta un attimo' : 'Vuoi uscire?'}</Text>
+            <Text style={styles.modalTitle}>{isGuest ? t('pf.waitTitle') : t('pf.logoutTitle')}</Text>
             <Text style={styles.modalText}>
-              {isGuest
-                ? 'Sei in modalità Guest: piano, stelle e storico sono salvati solo su questo dispositivo. Se esci ora li perdi.'
-                : 'Potrai rientrare in qualsiasi momento con la tua email e password: i tuoi progressi restano salvati.'}
+              {isGuest ? t('pf.logoutGuestText') : t('pf.logoutText')}
             </Text>
             {isGuest && (
               <Pressable style={styles.modalButtonPrimary} onPress={goSaveProgress}>
-                <Text style={styles.modalButtonConfirmText}>Salva prima i progressi</Text>
+                <Text style={styles.modalButtonConfirmText}>{t('pf.saveFirst')}</Text>
               </Pressable>
             )}
             <View style={styles.modalButtons}>
               <Pressable style={styles.modalButtonCancel} onPress={() => setShowLogoutModal(false)}>
-                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                <Text style={styles.modalButtonCancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable style={styles.modalButtonConfirm} onPress={confirmLogout}>
-                <Text style={styles.modalButtonConfirmText}>{isGuest ? 'Esci comunque' : 'Esci'}</Text>
+                <Text style={styles.modalButtonConfirmText}>{isGuest ? t('pf.logoutAnyway') : t('pf.logout')}</Text>
               </Pressable>
             </View>
           </View>
@@ -441,13 +434,11 @@ export default function ProfiloScreen() {
             <View style={styles.modalIcon}>
               <Ionicons name="trash" size={48} color="#EF5350" />
             </View>
-            <Text style={styles.modalTitle}>Eliminare l'account?</Text>
-            <Text style={styles.modalText}>
-              Cancelliamo per sempre il tuo account, il piano, le stelle e lo storico. Non si può annullare.
-            </Text>
+            <Text style={styles.modalTitle}>{t('pf.deleteTitle')}</Text>
+            <Text style={styles.modalText}>{t('pf.deleteText')}</Text>
             <TextInput
               style={styles.deleteInput}
-              placeholder="Inserisci la tua password"
+              placeholder={t('pf.deletePwPlaceholder')}
               value={deletePassword}
               onChangeText={setDeletePassword}
               secureTextEntry
@@ -456,14 +447,14 @@ export default function ProfiloScreen() {
             {deleteError && <Text style={styles.deleteError}>{deleteError}</Text>}
             <View style={styles.modalButtons}>
               <Pressable style={styles.modalButtonCancel} onPress={() => setShowDeleteModal(false)}>
-                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                <Text style={styles.modalButtonCancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalButtonDanger, deleting && { opacity: 0.6 }]}
                 onPress={confirmDeleteAccount}
                 disabled={deleting}
               >
-                <Text style={styles.modalButtonConfirmText}>{deleting ? 'Elimino...' : 'Elimina'}</Text>
+                <Text style={styles.modalButtonConfirmText}>{deleting ? t('pf.deleting') : t('pf.delete')}</Text>
               </Pressable>
             </View>
           </View>
@@ -481,26 +472,26 @@ export default function ProfiloScreen() {
             <View style={styles.modalIcon}>
               <Ionicons name="warning" size={48} color="#FF9800" />
             </View>
-            <Text style={styles.modalTitle}>Sei sicuro?</Text>
+            <Text style={styles.modalTitle}>{t('pf.sure')}</Text>
             <Text style={styles.modalText}>
-              Perderai tutti i dati locali di questa sessione, inclusi:{'\n\n'}
-              • Onboarding completato{'\n'}
-              • Screening e risultati{'\n'}
-              • Check-in giornalieri{'\n'}
-              • Dati guest salvati localmente
+              {t('pf.resetIntro')}{'\n\n'}
+              {'• ' + t('pf.resetItem1')}{'\n'}
+              {'• ' + t('pf.resetItem2')}{'\n'}
+              {'• ' + t('pf.resetItem3')}{'\n'}
+              {'• ' + t('pf.resetItem4')}
             </Text>
             <View style={styles.modalButtons}>
               <Pressable 
                 style={styles.modalButtonCancel}
                 onPress={() => setShowResetModal(false)}
               >
-                <Text style={styles.modalButtonCancelText}>Annulla</Text>
+                <Text style={styles.modalButtonCancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable 
                 style={styles.modalButtonConfirm}
                 onPress={handleResetApp}
               >
-                <Text style={styles.modalButtonConfirmText}>Reset App</Text>
+                <Text style={styles.modalButtonConfirmText}>{t('pf.resetBtn')}</Text>
               </Pressable>
             </View>
           </View>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Keyboa
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
+import { useI18n } from '../../src/i18n';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -10,14 +11,17 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  greeting?: boolean; // saluto iniziale: il testo segue la lingua scelta
 }
 
 export default function AICoachScreen() {
+  const { t, language } = useI18n();
   const { user, isGuest } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Ciao! 🌿 Sono il tuo AI Coach per il benessere. Come posso aiutarti oggi?',
+      content: '',
+      greeting: true,
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -45,13 +49,14 @@ export default function AICoachScreen() {
         body: JSON.stringify({
           user_id: isGuest ? null : user?.id,
           message: inputText,
+          language,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        Alert.alert('Errore', data.detail || 'Errore durante la comunicazione');
+        Alert.alert(t('common.error'), data.detail || t('coach.errComm'));
         setLoading(false);
         return;
       }
@@ -64,7 +69,7 @@ export default function AICoachScreen() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile connettersi al server');
+      Alert.alert(t('common.error'), t('auth.errConnect'));
     } finally {
       setLoading(false);
     }
@@ -83,13 +88,13 @@ export default function AICoachScreen() {
         <View style={styles.headerContent}>
           <Ionicons name="sparkles" size={32} color="#557A6D" />
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>AI Coach</Text>
-            <Text style={styles.headerSubtitle}>Il tuo assistente per il benessere</Text>
+            <Text style={styles.headerTitle}>{t('oggi.coachTitle')}</Text>
+            <Text style={styles.headerSubtitle}>{t('coach.subtitle')}</Text>
           </View>
         </View>
         <View style={styles.disclaimer}>
           <Ionicons name="information-circle" size={16} color="#FFA726" />
-          <Text style={styles.disclaimerText}>Non sostituisce consulenza medica</Text>
+          <Text style={styles.disclaimerText}>{t('coach.disclaimer')}</Text>
         </View>
       </View>
 
@@ -121,7 +126,7 @@ export default function AICoachScreen() {
                     message.role === 'user' ? styles.userText : styles.assistantText,
                   ]}
                 >
-                  {message.content}
+                  {message.greeting ? t('coach.greeting') : message.content}
                 </Text>
               </View>
             </View>
@@ -130,7 +135,7 @@ export default function AICoachScreen() {
             <View style={[styles.messageBubble, styles.assistantBubble]}>
               <Ionicons name="leaf" size={20} color="#557A6D" style={styles.messageIcon} />
               <View style={styles.messageContent}>
-                <Text style={styles.assistantText}>Sto pensando...</Text>
+                <Text style={styles.assistantText}>{t('coach.thinking')}</Text>
               </View>
             </View>
           )}
@@ -139,7 +144,7 @@ export default function AICoachScreen() {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Scrivi un messaggio..."
+            placeholder={t('coach.placeholder')}
             value={inputText}
             onChangeText={setInputText}
             multiline

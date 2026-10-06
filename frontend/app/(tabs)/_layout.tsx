@@ -1,8 +1,10 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useI18n } from '../../src/i18n';
 
 export default function TabsLayout() {
+  const { t } = useI18n();
   return (
     <Tabs
       screenOptions={{
@@ -26,7 +28,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="oggi"
         options={{
-          title: 'Oggi',
+          title: t('tabs.today'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="today" size={size} color={color} />
           ),
@@ -35,7 +37,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="mappa"
         options={{
-          title: 'Mappa',
+          title: t('tabs.map'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map" size={size} color={color} />
           ),
@@ -44,7 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="aicoach"
         options={{
-          title: 'AI Coach',
+          title: t('tabs.coach'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles" size={size} color={color} />
           ),
@@ -53,7 +55,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profilo"
         options={{
-          title: 'Profilo',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
@@ -62,7 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="suoni"
         options={{
-          title: 'Suoni',
+          title: t('tabs.sounds'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="musical-notes" size={size} color={color} />
           ),

@@ -9,6 +9,7 @@ import {
   fetchBackendScreeningHistory,
 } from '../../src/lib/screeningHistory';
 import { getAreaInfo } from '../../src/lib/pianoPlan';
+import { useI18n } from '../../src/i18n';
 
 // Conditionally import victory-native only on mobile
 let VictoryPolarAxis: any = null;
@@ -34,6 +35,7 @@ const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 const isWeb = Platform.OS === 'web';
 
 export default function MappaScreen() {
+  const { t, locale } = useI18n();
   const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
   const [checkinHistory, setCheckinHistory] = useState<any[]>([]);
   const [screeningHistory, setScreeningHistory] = useState<ScreeningHistoryEntry[]>([]);
@@ -84,9 +86,9 @@ export default function MappaScreen() {
   });
 
   const getJourneyStage = (score: number) => {
-    if (score >= 70) return { stage: 'Fioritura', icon: 'flower', color: '#557A6D', description: 'Il tuo benessere è in piena fioritura!' };
-    if (score >= 40) return { stage: 'Crescita', icon: 'leaf', color: '#FFA726', description: 'Stai crescendo bene, continua così!' };
-    return { stage: 'Semina', icon: 'water', color: '#42A5F5', description: 'Stai piantando i semi del benessere' };
+    if (score >= 70) return { stage: t('mappa.bloom'), icon: 'flower', color: '#557A6D', description: t('mappa.bloomDesc') };
+    if (score >= 40) return { stage: t('mappa.growth'), icon: 'leaf', color: '#FFA726', description: t('mappa.growthDesc') };
+    return { stage: t('mappa.sow'), icon: 'water', color: '#42A5F5', description: t('mappa.sowDesc') };
   };
 
   const currentStage = screeningResult ? getJourneyStage(screeningResult.indice_iobio) : null;
@@ -95,8 +97,8 @@ export default function MappaScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Il tuo Percorso</Text>
-          <Text style={styles.subtitle}>Mappa visiva del benessere</Text>
+          <Text style={styles.title}>{t('mappa.title')}</Text>
+          <Text style={styles.subtitle}>{t('mappa.subtitle')}</Text>
 
           {screeningResult && currentStage && (
             <>
@@ -111,11 +113,11 @@ export default function MappaScreen() {
               </View>
 
               <View style={styles.chartCard}>
-                <Text style={styles.sectionTitle}>Le tue aree di benessere</Text>
+                <Text style={styles.sectionTitle}>{t('mappa.areas')}</Text>
                 {isWeb ? (
                   <View style={{ padding: 20, width: '100%' }}>
                     <Text style={{ color: '#999', textAlign: 'center', marginBottom: 16 }}>
-                      📱 Grafici disponibili su mobile
+                      {t('mappa.mobileOnly')}
                     </Text>
                     {Object.keys(screeningResult.area_scores).map((area, index) => (
                       <View key={index} style={{ 
@@ -160,8 +162,8 @@ export default function MappaScreen() {
                         grid: { stroke: '#E0E0E0', strokeWidth: 1 },
                       }}
                       tickValues={Object.keys(screeningResult.area_scores).map((_, i) => i + 1)}
-                      tickFormat={(t) => {
-                        const area = Object.keys(screeningResult.area_scores)[t - 1];
+                      tickFormat={(tick: number) => {
+                        const area = Object.keys(screeningResult.area_scores)[tick - 1];
                         const label = area ? getAreaInfo(area).name : '';
                         return label.length > 12 ? label.substring(0, 10) + '...' : label;
                       }}
@@ -199,15 +201,15 @@ export default function MappaScreen() {
 
             return (
               <View style={styles.chartCard}>
-                <Text style={styles.sectionTitle}>Il tuo percorso nel tempo</Text>
+                <Text style={styles.sectionTitle}>{t('mappa.history')}</Text>
                 <Text style={styles.chartSubtitle}>
-                  Indice IOBIO su {screeningHistory.length} screening
+                  {t('mappa.historySub', { n: screeningHistory.length })}
                 </Text>
 
                 <View style={styles.trendDeltaRow}>
                   <Ionicons name={deltaIcon as any} size={20} color={deltaColor} />
                   <Text style={[styles.trendDeltaText, { color: deltaColor }]}>
-                    {delta > 0 ? '+' : ''}{delta} punti rispetto al primo screening
+                    {t('mappa.delta', { count: Math.abs(delta), delta: (delta > 0 ? '+' : '') + delta })}
                   </Text>
                 </View>
 
@@ -215,7 +217,7 @@ export default function MappaScreen() {
                   {shown.map((entry, index) => {
                     const isLast = index === shown.length - 1;
                     const barHeight = Math.max(6, (entry.indice_iobio / 100) * 100);
-                    const dateLabel = new Date(entry.date).toLocaleDateString('it-IT', {
+                    const dateLabel = new Date(entry.date).toLocaleDateString(locale, {
                       day: 'numeric',
                       month: 'short',
                     });
@@ -241,12 +243,12 @@ export default function MappaScreen() {
 
           {trendData.length > 0 && (
             <View style={styles.chartCard}>
-              <Text style={styles.sectionTitle}>Andamento ultimi 7 giorni</Text>
-              <Text style={styles.chartSubtitle}>Media giornaliera (energia, umore, sonno)</Text>
+              <Text style={styles.sectionTitle}>{t('mappa.trend')}</Text>
+              <Text style={styles.chartSubtitle}>{t('mappa.trendSub')}</Text>
               {isWeb ? (
                 <View style={{ padding: 20 }}>
                   <Text style={{ color: '#999', textAlign: 'center' }}>
-                    📱 Grafici disponibili su mobile
+                    {t('mappa.mobileOnly')}
                   </Text>
                 </View>
               ) : (
@@ -284,34 +286,34 @@ export default function MappaScreen() {
           {!screeningResult && (
             <View style={styles.emptyState}>
               <Ionicons name="map-outline" size={64} color="#E0E0E0" />
-              <Text style={styles.emptyText}>Completa lo screening per vedere la tua mappa del benessere</Text>
+              <Text style={styles.emptyText}>{t('mappa.empty')}</Text>
             </View>
           )}
 
           <View style={styles.journeyStages}>
-            <Text style={styles.sectionTitle}>Le fasi del tuo viaggio</Text>
+            <Text style={styles.sectionTitle}>{t('mappa.stages')}</Text>
             
             <View style={styles.stageItem}>
               <Ionicons name="water" size={32} color="#42A5F5" />
               <View style={styles.stageContent}>
-                <Text style={styles.stageName}>Semina</Text>
-                <Text style={styles.stageText}>Inizi a prenderti cura di te, piantando i semi del cambiamento</Text>
+                <Text style={styles.stageName}>{t('mappa.sow')}</Text>
+                <Text style={styles.stageText}>{t('mappa.sowStage')}</Text>
               </View>
             </View>
 
             <View style={styles.stageItem}>
               <Ionicons name="leaf" size={32} color="#FFA726" />
               <View style={styles.stageContent}>
-                <Text style={styles.stageName}>Crescita</Text>
-                <Text style={styles.stageText}>Le nuove abitudini crescono e si rafforzano</Text>
+                <Text style={styles.stageName}>{t('mappa.growth')}</Text>
+                <Text style={styles.stageText}>{t('mappa.growthStage')}</Text>
               </View>
             </View>
 
             <View style={styles.stageItem}>
               <Ionicons name="flower" size={32} color="#557A6D" />
               <View style={styles.stageContent}>
-                <Text style={styles.stageName}>Fioritura</Text>
-                <Text style={styles.stageText}>Il tuo benessere è in piena fioritura, continua a coltivarlo</Text>
+                <Text style={styles.stageName}>{t('mappa.bloom')}</Text>
+                <Text style={styles.stageText}>{t('mappa.bloomStage')}</Text>
               </View>
             </View>
           </View>

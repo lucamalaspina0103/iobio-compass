@@ -15,6 +15,7 @@ import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import { useAppContext } from '../../src/contexts/AppContext';
+import { useI18n } from '../../src/i18n';
 
 // Binaural beat sessions mapped to wellness areas
 interface BinauralSession {
@@ -109,15 +110,10 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
   },
 ];
 
-const DURATION_OPTIONS = [
-  { label: '5 min', value: 5 },
-  { label: '10 min', value: 10 },
-  { label: '15 min', value: 15 },
-  { label: '20 min', value: 20 },
-  { label: '30 min', value: 30 },
-];
+const DURATION_OPTIONS = [5, 10, 15, 20, 30].map(value => ({ value }));
 
 export default function SuoniScreen() {
+  const { t } = useI18n();
   const { screeningResult } = useAppContext();
   // Aperta da un task del piano ("Ascolta musica rilassante...") con la sessione gia' scelta
   const { session: sessionParam, minutes: minutesParam } = useLocalSearchParams<{ session?: string; minutes?: string }>();
@@ -505,10 +501,8 @@ export default function SuoniScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Suoni Binaurali</Text>
-          <Text style={styles.headerSubtitle}>
-            Suoni per rilassarti, concentrarti o dormire. Usa le cuffie stereo.
-          </Text>
+          <Text style={styles.headerTitle}>{t('sounds.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('sounds.subtitle')}</Text>
         </View>
 
         {/* Current Session Card */}
@@ -518,12 +512,12 @@ export default function SuoniScreen() {
               <Ionicons name={selectedSession.icon as any} size={28} color="#FFFFFF" />
             </View>
             <View style={styles.sessionInfo}>
-              <Text style={styles.sessionName}>{selectedSession.name}</Text>
-              <Text style={styles.sessionArea}>{selectedSession.area}</Text>
+              <Text style={styles.sessionName}>{t(`sound.${selectedSession.id}.name`)}</Text>
+              <Text style={styles.sessionArea}>{t(`area.${selectedSession.id}`)}</Text>
             </View>
           </View>
           
-          <Text style={styles.sessionDescription}>{selectedSession.description}</Text>
+          <Text style={styles.sessionDescription}>{t(`sound.${selectedSession.id}.desc`)}</Text>
           
           {/* Circular Timer */}
           <View style={styles.timerContainer}>
@@ -542,7 +536,7 @@ export default function SuoniScreen() {
               <View style={styles.timerInner}>
                 <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
                 <Text style={styles.timerLabel}>
-                  {isPlaying ? 'In riproduzione' : completed ? 'Sessione completata ✓' : 'Pronto'}
+                  {isPlaying ? t('sounds.playing') : completed ? t('sounds.completed') : t('sounds.ready')}
                 </Text>
               </View>
             </Animated.View>
@@ -575,7 +569,7 @@ export default function SuoniScreen() {
 
           <View style={styles.headphoneHint}>
             <Ionicons name="headset" size={16} color="#666" />
-            <Text style={styles.headphoneHintText}>Usa le cuffie stereo</Text>
+            <Text style={styles.headphoneHintText}>{t('sounds.headphones')}</Text>
           </View>
 
           {/* Duration Selector */}
@@ -584,7 +578,7 @@ export default function SuoniScreen() {
             onPress={() => setShowDurationPicker(!showDurationPicker)}
           >
             <Ionicons name="time-outline" size={20} color="#666" />
-            <Text style={styles.durationText}>{duration} minuti</Text>
+            <Text style={styles.durationText}>{t('sounds.minutes', { n: duration })}</Text>
             <Ionicons name="chevron-down" size={16} color="#666" />
           </Pressable>
 
@@ -603,7 +597,7 @@ export default function SuoniScreen() {
                     styles.durationOptionText,
                     duration === option.value && { color: selectedSession.color, fontWeight: '700' }
                   ]}>
-                    {option.label}
+                    {t('sounds.min', { n: option.value })}
                   </Text>
                 </Pressable>
               ))}
@@ -628,7 +622,7 @@ export default function SuoniScreen() {
 
         {/* Session List */}
         <View style={styles.sessionsSection}>
-          <Text style={styles.sectionTitle}>Tutte le Sessioni</Text>
+          <Text style={styles.sectionTitle}>{t('sounds.all')}</Text>
           
           {BINAURAL_SESSIONS.map(session => (
             <Pressable
@@ -652,7 +646,7 @@ export default function SuoniScreen() {
               </View>
               
               <View style={styles.sessionCardInfo}>
-                <Text style={styles.sessionCardName}>{session.name}</Text>
+                <Text style={styles.sessionCardName}>{t(`sound.${session.id}.name`)}</Text>
                 <Text style={styles.sessionCardFreq}>
                   {session.waveType.charAt(0).toUpperCase() + session.waveType.slice(1)} • {session.frequency}Hz
                 </Text>
@@ -669,11 +663,8 @@ export default function SuoniScreen() {
         <View style={styles.infoSection}>
           <View style={styles.infoCard}>
             <Ionicons name="headset" size={24} color="#557A6D" />
-            <Text style={styles.infoTitle}>Usa le cuffie</Text>
-            <Text style={styles.infoText}>
-              I suoni binaurali funzionano con le cuffie stereo: ogni orecchio riceve una frequenza leggermente diversa.
-              Tieni il volume basso e non ascoltarli mentre guidi o usi macchinari. Non sono un trattamento medico.
-            </Text>
+            <Text style={styles.infoTitle}>{t('sounds.infoTitle')}</Text>
+            <Text style={styles.infoText}>{t('sounds.infoText')}</Text>
           </View>
         </View>
 

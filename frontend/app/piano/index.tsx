@@ -32,9 +32,12 @@ import { addLocalDiaryEntry, addBackendDiaryEntry } from '../../src/lib/diary';
 import DiaryEntryModal from '../../src/components/DiaryEntryModal';
 import ResourceSuggestionModal from '../../src/components/ResourceSuggestionModal';
 import { useReloadOnResume } from '../../src/lib/useReloadOnResume';
+import { useI18n } from '../../src/i18n';
+import { taskText } from '../../src/lib/taskText';
 
 export default function PianoScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
 
   const [tasks, setTasks] = useState<PianoTask[]>([]);
@@ -185,7 +188,7 @@ export default function PianoScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#557A6D" />
-          <Text style={styles.loadingText}>Caricamento piano...</Text>
+          <Text style={styles.loadingText}>{t('piano.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -204,7 +207,7 @@ export default function PianoScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
           </Pressable>
-          <Text style={styles.headerTitle}>Piano 30 Giorni</Text>
+          <Text style={styles.headerTitle}>{t('piano.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -213,9 +216,9 @@ export default function PianoScreen() {
           <View style={styles.progressHeader}>
             <Ionicons name="trophy" size={32} color="#FFB300" />
             <View style={styles.progressInfo}>
-              <Text style={styles.progressTitle}>Il tuo progresso</Text>
+              <Text style={styles.progressTitle}>{t('piano.progress')}</Text>
               <Text style={styles.progressSubtitle}>
-                Giorno {currentDay} di 30 · {todayPhase.label}
+                {t('piano.dayOf', { day: currentDay, phase: todayPhase.label })}
               </Text>
             </View>
             <View style={styles.progressCircle}>
@@ -228,15 +231,15 @@ export default function PianoScreen() {
           </View>
 
           <Text style={styles.progressStats}>
-            {completedTasks} di {tasks.length} attività completate
+            {t('piano.activities', { done: completedTasks, total: tasks.length })}
           </Text>
 
           <View style={styles.totalStarsRow}>
             <Ionicons name="star" size={18} color="#FFB300" />
             <Text style={styles.totalStarsText}>
-              {stars.total + bankedStars} {stars.total + bankedStars === 1 ? 'stella guadagnata' : 'stelle guadagnate'}
-              {stars.bonusStars > 0 ? ` (di cui ${stars.bonusStars} di bonus)` : ''}
-              {bankedStars > 0 ? ` · ${bankedStars} dai percorsi precedenti` : ''}
+              {t('piano.stars', { count: stars.total + bankedStars })}
+              {stars.bonusStars > 0 ? t('piano.starsBonus', { n: stars.bonusStars }) : ''}
+              {bankedStars > 0 ? t('piano.starsBanked', { n: bankedStars }) : ''}
             </Text>
           </View>
 
@@ -244,8 +247,8 @@ export default function PianoScreen() {
             <View style={styles.streakRow}>
               <Ionicons name="flame" size={18} color="#FF7043" />
               <Text style={styles.streakText}>
-                {streak} {streak === 1 ? 'giorno' : 'giorni'} di fila
-                {nextMilestone ? ` · prossimo traguardo: ${nextMilestone} giorni` : ' · piano completato!'}
+                {t('piano.streak', { count: streak })}
+                {nextMilestone ? t('piano.nextMilestone', { n: nextMilestone }) : t('piano.complete')}
               </Text>
             </View>
           )}
@@ -256,17 +259,17 @@ export default function PianoScreen() {
           <View style={styles.todayCard}>
             <View style={styles.todayHeader}>
               <View style={styles.todayBadge}>
-                <Text style={styles.todayBadgeText}>OGGI</Text>
+                <Text style={styles.todayBadgeText}>{t('piano.today')}</Text>
               </View>
               <Text style={styles.todayPhaseText}>
-                Ne bastano {todayPhase.minRequired} di {todayTasks.length} oggi
+                {t('piano.enough', { min: todayPhase.minRequired, total: todayTasks.length })}
               </Text>
             </View>
 
             {todaySucceeded && (
               <View style={styles.todaySuccessBanner}>
                 <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-                <Text style={styles.todaySuccessText}>Giornata riuscita, sei a posto!</Text>
+                <Text style={styles.todaySuccessText}>{t('oggi.daySuccess')}</Text>
               </View>
             )}
 
@@ -286,10 +289,10 @@ export default function PianoScreen() {
                   />
                   <View style={styles.optionTextWrap}>
                     <Text style={styles.optionAreaTag}>
-                      {info.name}{task.optional ? ' · extra' : ''}
+                      {info.name}{task.optional ? ' · ' + t('oggi.extra') : ''}
                     </Text>
                     <Text style={[styles.optionText, task.completed && styles.optionTextCompleted]}>
-                      {task.task}
+                      {taskText(task.task)}
                     </Text>
                   </View>
                   {!task.completed && interaction && (
@@ -307,7 +310,7 @@ export default function PianoScreen() {
 
         {/* Days List */}
         <View style={styles.daysSection}>
-          <Text style={styles.daysSectionTitle}>Tutte le attività</Text>
+          <Text style={styles.daysSectionTitle}>{t('piano.allActivities')}</Text>
 
           {Array.from({ length: 30 }, (_, i) => i + 1).map(day => {
             const dayTasks = tasksByDay[day] || [];
@@ -347,12 +350,12 @@ export default function PianoScreen() {
                     </View>
                     <View>
                       <Text style={styles.dayTitle}>
-                        Giorno {day}
-                        {isCurrentDay && ' (Oggi)'}
+                        {t('piano.day', { day })}
+                        {isCurrentDay && t('piano.todayParen')}
                       </Text>
                       {dayTasks.length > 0 && (
                         <Text style={styles.dayArea}>
-                          {dayCompletedCount}/{dayTasks.length} · almeno {phase.minRequired} per riuscire
+                          {t('piano.atLeast', { done: dayCompletedCount, total: dayTasks.length, min: phase.minRequired })}
                         </Text>
                       )}
                     </View>
@@ -392,13 +395,13 @@ export default function PianoScreen() {
                           />
                           <View style={styles.taskTextWrap}>
                             <Text style={styles.taskAreaTag}>
-                              {info.name}{task.optional ? ' · extra' : ''}
+                              {info.name}{task.optional ? ' · ' + t('oggi.extra') : ''}
                             </Text>
                             <Text style={[
                               styles.taskText,
                               task.completed && styles.taskTextCompleted
                             ]}>
-                              {task.task}
+                              {taskText(task.task)}
                             </Text>
                           </View>
                           {!task.completed && interaction && day <= currentDay && (
@@ -423,7 +426,7 @@ export default function PianoScreen() {
           <View style={styles.guestNotice}>
             <Ionicons name="information-circle" size={20} color="#FF9800" />
             <Text style={styles.guestNoticeText}>
-              Modalità Guest: i progressi sono salvati localmente sul dispositivo.
+              {t('piano.guest')}
             </Text>
           </View>
         )}
@@ -432,7 +435,7 @@ export default function PianoScreen() {
 
       <DiaryEntryModal
         visible={!!writeTask}
-        prompt={writeTask?.task}
+        prompt={writeTask ? taskText(writeTask.task) : undefined}
         onSave={handleSaveWriteTask}
         onCancel={() => setWriteTask(null)}
       />
