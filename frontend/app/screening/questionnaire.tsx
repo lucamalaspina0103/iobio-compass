@@ -269,7 +269,7 @@ function QuestionnaireScreen() {
       <View style={styles.buttonContainer}>
         {currentQuestionIndex > 0 && (
           <Pressable style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={20} color="#7CB342" />
+            <Ionicons name="arrow-back" size={20} color="#557A6D" />
             <Text style={styles.backButtonText}>Indietro</Text>
           </Pressable>
         )}
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   progressText: { fontSize: 16, fontWeight: '600', color: '#4A4A4A' },
   timeText: { fontSize: 14, color: '#999' },
   progressBarContainer: { height: 6, backgroundColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden' },
-  progressBar: { height: '100%', backgroundColor: '#7CB342', borderRadius: 3 },
+  progressBar: { height: '100%', backgroundColor: '#557A6D', borderRadius: 3 },
   content: { flex: 1, padding: 24, justifyContent: 'center' },
   areaHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 24, gap: 12 },
   areaName: { fontSize: 18, fontWeight: '600' },
@@ -314,18 +314,18 @@ const styles = StyleSheet.create({
   answerSection: { marginBottom: 32 },
   buttonSelector: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, gap: 8 },
   valueButton: { flex: 1, aspectRatio: 1, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 2, borderColor: '#E0E0E0', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  valueButtonSelected: { borderColor: '#7CB342', borderWidth: 3 },
+  valueButtonSelected: { borderColor: '#557A6D', borderWidth: 3 },
   valueButtonText: { fontSize: 24, fontWeight: '600', color: '#666' },
   valueButtonTextSelected: { color: '#FFFFFF' },
   labelsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   label: { fontSize: 10, color: '#999', flex: 1, textAlign: 'center' },
-  labelActive: { color: '#7CB342', fontWeight: '600' },
-  hintContainer: { backgroundColor: '#E8F5E9', borderRadius: 12, padding: 16 },
+  labelActive: { color: '#557A6D', fontWeight: '600' },
+  hintContainer: { backgroundColor: '#E4EEEA', borderRadius: 12, padding: 16 },
   hintText: { fontSize: 14, color: '#4A4A4A', lineHeight: 20, textAlign: 'center' },
   buttonContainer: { flexDirection: 'row', padding: 20, gap: 12 },
-  backButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#7CB342', gap: 8 },
-  backButtonText: { color: '#7CB342', fontSize: 16, fontWeight: '600' },
-  nextButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#7CB342', borderRadius: 12, padding: 16, gap: 8 },
+  backButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#557A6D', gap: 8 },
+  backButtonText: { color: '#557A6D', fontSize: 16, fontWeight: '600' },
+  nextButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#557A6D', borderRadius: 12, padding: 16, gap: 8 },
   nextButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  buildLabel: { fontSize: 10, color: '#7CB342', textAlign: 'center', paddingBottom: 8, fontWeight: '600' },
+  buildLabel: { fontSize: 10, color: '#557A6D', textAlign: 'center', paddingBottom: 8, fontWeight: '600' },
 });

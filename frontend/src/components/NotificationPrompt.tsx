@@ -43,7 +43,7 @@ export default function NotificationPrompt({ visible, onClose }: NotificationPro
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
-            <Ionicons name="notifications" size={34} color="#7CB342" />
+            <Ionicons name="notifications" size={34} color="#557A6D" />
           </View>
           <Text style={styles.title}>Un promemoria gentile?</Text>
           <Text style={styles.text}>
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -95,10 +95,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, color: '#888', marginBottom: 8 },
   timeRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 20 },
   chip: { borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 2, borderColor: '#E0E0E0', backgroundColor: '#FFFFFF' },
-  chipSelected: { borderColor: '#7CB342', backgroundColor: '#E8F5E9' },
+  chipSelected: { borderColor: '#557A6D', backgroundColor: '#E4EEEA' },
   chipText: { fontSize: 14, color: '#666', fontWeight: '500' },
-  chipTextSelected: { color: '#7CB342', fontWeight: '700' },
-  primary: { backgroundColor: '#7CB342', borderRadius: 12, paddingVertical: 14, alignSelf: 'stretch', alignItems: 'center', marginBottom: 6 },
+  chipTextSelected: { color: '#557A6D', fontWeight: '700' },
+  primary: { backgroundColor: '#557A6D', borderRadius: 12, paddingVertical: 14, alignSelf: 'stretch', alignItems: 'center', marginBottom: 6 },
   disabled: { opacity: 0.6 },
   primaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   secondaryText: { color: '#999', fontSize: 15, padding: 10 },

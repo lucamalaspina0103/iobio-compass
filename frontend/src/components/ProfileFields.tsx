@@ -53,19 +53,19 @@ export default function ProfileFields({
               <Ionicons
                 name={g.icon as any}
                 size={22}
-                color={gender === g.value ? '#7CB342' : '#999'}
+                color={gender === g.value ? '#557A6D' : '#999'}
               />
               <Text style={[styles.optionRowText, gender === g.value && styles.optionRowTextSelected]}>
                 {g.label}
               </Text>
-              {gender === g.value && <Ionicons name="checkmark-circle" size={22} color="#7CB342" />}
+              {gender === g.value && <Ionicons name="checkmark-circle" size={22} color="#557A6D" />}
             </Pressable>
           ))}
         </View>
       </View>
 
       <View style={styles.infoBox}>
-        <Ionicons name="information-circle" size={18} color="#7CB342" />
+        <Ionicons name="information-circle" size={18} color="#557A6D" />
         <Text style={styles.infoText}>
           Questi dati restano privati, servono solo per analisi interne e non influenzano mai
           i tuoi risultati. Puoi scegliere "Preferisco non dirlo".
@@ -88,9 +88,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     minWidth: '47%',
   },
-  optionSelected: { borderColor: '#7CB342', backgroundColor: '#E8F5E9' },
+  optionSelected: { borderColor: '#557A6D', backgroundColor: '#E4EEEA' },
   optionText: { fontSize: 14, color: '#666', textAlign: 'center', fontWeight: '500' },
-  optionTextSelected: { color: '#7CB342', fontWeight: '600' },
+  optionTextSelected: { color: '#557A6D', fontWeight: '600' },
   optionsColumn: { gap: 10 },
   optionRow: {
     flexDirection: 'row',
@@ -102,12 +102,12 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     gap: 10,
   },
-  optionRowSelected: { borderColor: '#7CB342', backgroundColor: '#E8F5E9' },
+  optionRowSelected: { borderColor: '#557A6D', backgroundColor: '#E4EEEA' },
   optionRowText: { flex: 1, fontSize: 14, color: '#666', fontWeight: '500' },
-  optionRowTextSelected: { color: '#7CB342', fontWeight: '600' },
+  optionRowTextSelected: { color: '#557A6D', fontWeight: '600' },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,

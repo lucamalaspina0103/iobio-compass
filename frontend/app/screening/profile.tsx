@@ -35,7 +35,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Ionicons name="person-circle" size={64} color="#7CB342" />
+            <Ionicons name="person-circle" size={64} color="#557A6D" />
             <Text style={styles.title}>Profilo Rapido</Text>
             <Text style={styles.subtitle}>
               2 domande per personalizzare i tuoi suggerimenti
@@ -82,7 +82,7 @@ export default function ProfileScreen() {
                   <Ionicons
                     name={g.icon as any}
                     size={24}
-                    color={gender === g.value ? '#7CB342' : '#999'}
+                    color={gender === g.value ? '#557A6D' : '#999'}
                   />
                   <Text
                     style={[
@@ -93,7 +93,7 @@ export default function ProfileScreen() {
                     {g.label}
                   </Text>
                   {gender === g.value && (
-                    <Ionicons name="checkmark-circle" size={24} color="#7CB342" />
+                    <Ionicons name="checkmark-circle" size={24} color="#557A6D" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -101,7 +101,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color="#7CB342" />
+            <Ionicons name="information-circle" size={20} color="#557A6D" />
             <Text style={styles.infoText}>
               Questi dati ci aiutano a personalizzare i suggerimenti. Restano privati e non influenzano il tuo punteggio.
             </Text>
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
     minWidth: '47%',
   },
   optionSelected: {
-    borderColor: '#7CB342',
-    backgroundColor: '#E8F5E9',
+    borderColor: '#557A6D',
+    backgroundColor: '#E4EEEA',
   },
   optionText: {
     fontSize: 16,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionTextSelected: {
-    color: '#7CB342',
+    color: '#557A6D',
     fontWeight: '600',
   },
   optionsColumn: {
@@ -208,8 +208,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionRowSelected: {
-    borderColor: '#7CB342',
-    backgroundColor: '#E8F5E9',
+    borderColor: '#557A6D',
+    backgroundColor: '#E4EEEA',
   },
   optionRowText: {
     flex: 1,
@@ -218,12 +218,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   optionRowTextSelected: {
-    color: '#7CB342',
+    color: '#557A6D',
     fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   buildLabel: {
     fontSize: 11,
-    color: '#7CB342',
+    color: '#557A6D',
     textAlign: 'center',
     fontWeight: '600',
     letterSpacing: 0.5,

@@ -183,7 +183,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#7CB342" />
+          <ActivityIndicator size="large" color="#557A6D" />
         </View>
       </SafeAreaView>
     );
@@ -193,7 +193,7 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
-          <Ionicons name="compass" size={56} color="#7CB342" />
+          <Ionicons name="compass" size={56} color="#557A6D" />
           <Text style={styles.title}>La revisione del mese</Text>
           <Text style={styles.text}>È pensata per chi ha un account e cammina con noi da oltre tre mesi.</Text>
           <Pressable style={styles.primary} onPress={() => router.back()}>
@@ -225,7 +225,7 @@ export default function ReviewScreen() {
         {header}
         <ScrollView contentContainerStyle={styles.body}>
           <View style={styles.iconWrap}>
-            <Ionicons name="compass" size={44} color="#7CB342" />
+            <Ionicons name="compass" size={44} color="#557A6D" />
           </View>
           <Text style={styles.title}>Un altro mese insieme</Text>
           <Text style={styles.text}>
@@ -408,18 +408,18 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   headerTitle: { fontSize: 15, fontWeight: '700', color: '#4A4A4A' },
   progressTrack: { height: 6, backgroundColor: '#E0E0E0', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: 6, backgroundColor: '#7CB342', borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: '#557A6D', borderRadius: 3 },
   body: { padding: 20, paddingBottom: 40 },
-  iconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 8, marginBottom: 16 },
+  iconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#E4EEEA', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 8, marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '700', color: '#4A4A4A', textAlign: 'center', marginBottom: 10 },
   text: { fontSize: 15, color: '#666', lineHeight: 22, textAlign: 'center', marginBottom: 18 },
   summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 14, gap: 4 },
-  summaryTitle: { fontSize: 13, fontWeight: '700', color: '#7CB342', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryTitle: { fontSize: 13, fontWeight: '700', color: '#557A6D', textTransform: 'uppercase', letterSpacing: 0.5 },
   summaryLine: { fontSize: 17, fontWeight: '600', color: '#4A4A4A' },
   summaryHint: { fontSize: 12, color: '#999' },
   stepsCard: { backgroundColor: '#FFFBF0', borderRadius: 16, padding: 16, marginBottom: 22, gap: 6 },
   stepLine: { fontSize: 14, color: '#4A4A4A', lineHeight: 20 },
-  primary: { backgroundColor: '#7CB342', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 6 },
+  primary: { backgroundColor: '#557A6D', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 6 },
   primaryText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   secondaryText: { color: '#999', fontSize: 15, textAlign: 'center', padding: 12 },
   disabled: { opacity: 0.5 },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   navRow: { flexDirection: 'row', gap: 12, marginTop: 14 },
   backBtn: { flex: 1, borderRadius: 12, padding: 16, alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E0E0E0' },
   backText: { color: '#666', fontSize: 16, fontWeight: '600' },
-  nextBtn: { flex: 2, backgroundColor: '#7CB342', borderRadius: 12, padding: 16, alignItems: 'center' },
+  nextBtn: { flex: 2, backgroundColor: '#557A6D', borderRadius: 12, padding: 16, alignItems: 'center' },
   reflectBlock: { marginBottom: 14 },
   reflectLabel: { fontSize: 14, fontWeight: '600', color: '#4A4A4A', marginBottom: 6 },
   reflectInput: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, fontSize: 15, minHeight: 84, borderWidth: 1, borderColor: '#E0E0E0' },

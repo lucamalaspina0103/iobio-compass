@@ -93,7 +93,7 @@ const BINAURAL_SESSIONS: BinauralSession[] = [
     baseFrequency: 190,
     waveType: 'alpha',
     description: 'Onde Alpha a 8 Hz, pensate per mangiare con calma e attenzione',
-    color: '#AED581',
+    color: '#9DBDB0',
     icon: 'nutrition',
   },
   {
@@ -668,7 +668,7 @@ export default function SuoniScreen() {
         {/* Info Section */}
         <View style={styles.infoSection}>
           <View style={styles.infoCard}>
-            <Ionicons name="headset" size={24} color="#7CB342" />
+            <Ionicons name="headset" size={24} color="#557A6D" />
             <Text style={styles.infoTitle}>Usa le cuffie</Text>
             <Text style={styles.infoText}>
               I suoni binaurali funzionano con le cuffie stereo: ogni orecchio riceve una frequenza leggermente diversa.
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   infoCard: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
   },
   buildLabel: {
     fontSize: 11,
-    color: '#7CB342',
+    color: '#557A6D',
     fontWeight: '600',
     textAlign: 'center',
     letterSpacing: 0.5,

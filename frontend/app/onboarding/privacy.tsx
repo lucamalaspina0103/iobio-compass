@@ -119,13 +119,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
   },
   checkboxText: {
     flex: 1,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   button: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

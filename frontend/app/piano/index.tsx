@@ -184,7 +184,7 @@ export default function PianoScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7CB342" />
+          <ActivityIndicator size="large" color="#557A6D" />
           <Text style={styles.loadingText}>Caricamento piano...</Text>
         </View>
       </SafeAreaView>
@@ -196,7 +196,7 @@ export default function PianoScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7CB342']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#557A6D']} />
         }
       >
         {/* Header */}
@@ -523,14 +523,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
   },
   progressPercentage: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   progressBarContainer: {
     height: 8,
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 4,
   },
   progressStats: {
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   todayCard: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -675,10 +675,10 @@ const styles = StyleSheet.create({
   },
   dayHeaderCurrent: {
     borderWidth: 2,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
   },
   dayHeaderCompleted: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
   },
   dayInfo: {
     flexDirection: 'row',
@@ -694,10 +694,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   dayNumberCurrent: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
   },
   dayNumberCompleted: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
   },
   dayNumberText: {
     fontSize: 14,
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
   },
   buildLabel: {
     fontSize: 11,
-    color: '#7CB342',
+    color: '#557A6D',
     fontWeight: '600',
     letterSpacing: 0.5,
   },

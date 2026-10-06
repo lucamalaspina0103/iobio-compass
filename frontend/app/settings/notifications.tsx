@@ -19,7 +19,7 @@ import {
   syncNotifications,
 } from '../../src/lib/notificationsNative';
 
-const TRACK = { false: '#E0E0E0', true: '#AED581' };
+const TRACK = { false: '#E0E0E0', true: '#9DBDB0' };
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -70,7 +70,7 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7CB342" />
+          <ActivityIndicator size="large" color="#557A6D" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
@@ -80,7 +80,7 @@ export default function NotificationsScreen() {
 
           {permission === 'unsupported' && (
             <View style={styles.soonBox}>
-              <Ionicons name="time-outline" size={20} color="#7CB342" />
+              <Ionicons name="time-outline" size={20} color="#557A6D" />
               <Text style={styles.soonText}>
                 I promemoria arriveranno con l'app per telefono (non sul sito web). Le tue scelte sono già salvate e verranno applicate appena disponibili.
               </Text>
@@ -88,13 +88,13 @@ export default function NotificationsScreen() {
           )}
           {permission === 'granted' && (
             <View style={styles.soonBox}>
-              <Ionicons name="checkmark-circle" size={20} color="#7CB342" />
+              <Ionicons name="checkmark-circle" size={20} color="#557A6D" />
               <Text style={styles.soonText}>Le notifiche sono attive su questo telefono.</Text>
             </View>
           )}
           {permission === 'undetermined' && (
             <View style={styles.soonBox}>
-              <Ionicons name="notifications-outline" size={20} color="#7CB342" />
+              <Ionicons name="notifications-outline" size={20} color="#557A6D" />
               <Text style={styles.soonText}>Per ricevere i promemoria serve il tuo permesso.</Text>
               <Pressable onPress={askPermission}>
                 <Text style={styles.pauseAction}>Consenti</Text>
@@ -122,14 +122,14 @@ export default function NotificationsScreen() {
               value={settings.enabled}
               onValueChange={v => update({ enabled: v })}
               trackColor={TRACK}
-              thumbColor={settings.enabled ? '#7CB342' : '#f4f3f4'}
+              thumbColor={settings.enabled ? '#557A6D' : '#f4f3f4'}
             />
           </View>
 
           <View style={[styles.group, !settings.enabled && styles.groupDisabled]} pointerEvents={settings.enabled ? 'auto' : 'none'}>
             <View style={styles.card}>
               <View style={styles.iconWrap}>
-                <Ionicons name="sunny" size={22} color="#7CB342" />
+                <Ionicons name="sunny" size={22} color="#557A6D" />
               </View>
               <View style={styles.cardTextWrap}>
                 <Text style={styles.cardTitle}>Il tuo momento</Text>
@@ -139,7 +139,7 @@ export default function NotificationsScreen() {
                 value={settings.dailyMoment}
                 onValueChange={v => update({ dailyMoment: v })}
                 trackColor={TRACK}
-                thumbColor={settings.dailyMoment ? '#7CB342' : '#f4f3f4'}
+                thumbColor={settings.dailyMoment ? '#557A6D' : '#f4f3f4'}
               />
             </View>
 
@@ -165,7 +165,7 @@ export default function NotificationsScreen() {
 
             <View style={styles.card}>
               <View style={styles.iconWrap}>
-                <Ionicons name="hand-left" size={22} color="#7CB342" />
+                <Ionicons name="hand-left" size={22} color="#557A6D" />
               </View>
               <View style={styles.cardTextWrap}>
                 <Text style={styles.cardTitle}>Ti aspetto, senza fretta</Text>
@@ -177,13 +177,13 @@ export default function NotificationsScreen() {
                 value={settings.comeback}
                 onValueChange={v => update({ comeback: v })}
                 trackColor={TRACK}
-                thumbColor={settings.comeback ? '#7CB342' : '#f4f3f4'}
+                thumbColor={settings.comeback ? '#557A6D' : '#f4f3f4'}
               />
             </View>
 
             <View style={styles.card}>
               <View style={styles.iconWrap}>
-                <Ionicons name="ribbon" size={22} color="#7CB342" />
+                <Ionicons name="ribbon" size={22} color="#557A6D" />
               </View>
               <View style={styles.cardTextWrap}>
                 <Text style={styles.cardTitle}>Momenti importanti</Text>
@@ -195,7 +195,7 @@ export default function NotificationsScreen() {
                 value={settings.milestones}
                 onValueChange={v => update({ milestones: v })}
                 trackColor={TRACK}
-                thumbColor={settings.milestones ? '#7CB342' : '#f4f3f4'}
+                thumbColor={settings.milestones ? '#557A6D' : '#f4f3f4'}
               />
             </View>
           </View>
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -296,9 +296,9 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     backgroundColor: '#FFFFFF',
   },
-  timeChipSelected: { borderColor: '#7CB342', backgroundColor: '#E8F5E9' },
+  timeChipSelected: { borderColor: '#557A6D', backgroundColor: '#E4EEEA' },
   timeChipText: { fontSize: 14, color: '#666', fontWeight: '500' },
-  timeChipTextSelected: { color: '#7CB342', fontWeight: '700' },
+  timeChipTextSelected: { color: '#557A6D', fontWeight: '700' },
   pauseCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -310,6 +310,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pauseText: { flex: 1, fontSize: 14, color: '#4A4A4A' },
-  pauseAction: { fontSize: 14, color: '#7CB342', fontWeight: '600' },
+  pauseAction: { fontSize: 14, color: '#557A6D', fontWeight: '600' },
   footerNote: { fontSize: 13, color: '#999', textAlign: 'center', lineHeight: 19 },
 });

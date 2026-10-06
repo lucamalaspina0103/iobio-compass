@@ -40,7 +40,7 @@ export const AREA_INFO: { [key: string]: { name: string; icon: string; color: st
 };
 
 export const getAreaInfo = (area: string) =>
-  AREA_INFO[area] || { name: area, icon: 'ellipse', color: '#7CB342' };
+  AREA_INFO[area] || { name: area, icon: 'ellipse', color: '#557A6D' };
 
 // Pool di 15 micro-azioni per area. Stesso identico testo del backend
 // (backend/server.py) per restare sincronizzati tra modalita' Guest (locale) e

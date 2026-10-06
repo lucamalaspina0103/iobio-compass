@@ -16,7 +16,7 @@ interface CycleNoticeProps {
 export default function CycleNotice({ kind, currentDay, daysSince, onPress, onDismiss }: CycleNoticeProps) {
   const copy = getNoticeCopy(kind, currentDay, daysSince);
   const strong = copy.tone === 'strong';
-  const accent = strong ? '#F57C00' : '#7CB342';
+  const accent = strong ? '#F57C00' : '#557A6D';
 
   return (
     <View style={[styles.card, strong ? styles.cardStrong : styles.cardSoft]}>
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1.5,
   },
-  cardSoft: { backgroundColor: '#F1F8E9', borderColor: '#C5E1A5' },
+  cardSoft: { backgroundColor: '#EEF4F1', borderColor: '#BCD3C9' },
   cardStrong: { backgroundColor: '#FFF3E0', borderColor: '#FFB74D' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   title: { flex: 1, fontSize: 16, fontWeight: '700', color: '#4A4A4A' },

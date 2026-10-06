@@ -100,7 +100,7 @@ export const MILESTONE_MESSAGES: { [milestone: number]: MilestoneMessage } = {
     title: 'Una settimana di fila',
     message: "La parte più difficile, l'aggancio, è alle spalle. Da adesso il piano ti chiede un po' di più, perché ormai ci sei dentro.",
     icon: 'leaf',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   14: {
     title: 'Due settimane di fila',

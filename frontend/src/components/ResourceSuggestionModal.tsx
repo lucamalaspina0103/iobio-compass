@@ -104,7 +104,7 @@ export default function ResourceSuggestionModal({
       <View style={styles.overlay}>
         <ScrollView style={styles.card} contentContainerStyle={styles.cardContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Ionicons name={ICONS[kind] as any} size={22} color="#7CB342" />
+            <Ionicons name={ICONS[kind] as any} size={22} color="#557A6D" />
             <Text style={styles.headerTitle}>{taskText}</Text>
             <Pressable onPress={onClose} hitSlop={8}>
               <Ionicons name="close" size={24} color="#999" />
@@ -128,7 +128,7 @@ export default function ResourceSuggestionModal({
             <>
               {suggestion.fromAI ? (
                 <View style={styles.aiTag}>
-                  <Ionicons name="sparkles" size={14} color="#7CB342" />
+                  <Ionicons name="sparkles" size={14} color="#557A6D" />
                   <Text style={styles.aiTagText}>Suggerimento su misura</Text>
                 </View>
               ) : (
@@ -137,7 +137,7 @@ export default function ResourceSuggestionModal({
               <Text style={styles.suggestionText}>{suggestion.text}</Text>
               {suggestion.pointer && (
                 <View style={styles.pointerRow}>
-                  <Ionicons name="pricetag-outline" size={14} color="#7CB342" />
+                  <Ionicons name="pricetag-outline" size={14} color="#557A6D" />
                   <Text style={styles.pointerText}>{suggestion.pointer}</Text>
                 </View>
               )}
@@ -159,7 +159,7 @@ export default function ResourceSuggestionModal({
                 style={suggestion.action ? styles.outlineButton : styles.primaryButton}
                 onPress={() => { onComplete(); onClose(); }}
               >
-                <Ionicons name="checkmark-circle" size={18} color={suggestion.action ? '#7CB342' : '#FFFFFF'} />
+                <Ionicons name="checkmark-circle" size={18} color={suggestion.action ? '#557A6D' : '#FFFFFF'} />
                 <Text style={suggestion.action ? styles.outlineButtonText : styles.primaryButtonText}>
                   {suggestion.action ? (suggestion.action.doneLabel || 'Ho già ascoltato, segna come fatto') : 'Segna come fatto'}
                 </Text>
@@ -228,22 +228,22 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 16 },
   headerTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: '#4A4A4A' },
   question: { fontSize: 15, color: '#666', marginBottom: 16 },
-  ideaTitle: { fontSize: 12, fontWeight: '700', color: '#7CB342', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  ideaTitle: { fontSize: 12, fontWeight: '700', color: '#557A6D', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   suggestionText: { fontSize: 16, color: '#4A4A4A', lineHeight: 24, marginBottom: 12 },
   pointerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 20 },
-  pointerText: { flex: 1, fontSize: 13, color: '#7CB342', fontWeight: '600' },
+  pointerText: { flex: 1, fontSize: 13, color: '#557A6D', fontWeight: '600' },
   aiTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 10,
   },
-  aiTagText: { fontSize: 12, color: '#7CB342', fontWeight: '600' },
+  aiTagText: { fontSize: 12, color: '#557A6D', fontWeight: '600' },
   input: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flexDirection: 'row',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -274,10 +274,10 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
     borderWidth: 1.5,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
   },
-  outlineButtonText: { color: '#7CB342', fontSize: 15, fontWeight: '600' },
+  outlineButtonText: { color: '#557A6D', fontSize: 15, fontWeight: '600' },
   secondaryButton: { padding: 12, alignItems: 'center', marginBottom: 2 },
-  secondaryButtonText: { color: '#7CB342', fontSize: 15, fontWeight: '500' },
+  secondaryButtonText: { color: '#557A6D', fontSize: 15, fontWeight: '500' },
   linkText: { color: '#999', fontSize: 14, textAlign: 'center', textDecorationLine: 'underline', marginTop: 4 },
 });

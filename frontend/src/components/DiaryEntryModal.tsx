@@ -42,7 +42,7 @@ export default function DiaryEntryModal({
       >
         <View style={styles.card}>
           <View style={styles.header}>
-            <Ionicons name="book" size={22} color="#7CB342" />
+            <Ionicons name="book" size={22} color="#557A6D" />
             <Text style={styles.headerTitle}>{prompt ? 'Scrivi' : 'Il tuo diario'}</Text>
             <Pressable onPress={onCancel} hitSlop={8}>
               <Ionicons name="close" size={24} color="#999" />
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveButton: { flex: 1, backgroundColor: '#7CB342', borderRadius: 12, padding: 16, alignItems: 'center' },
+  saveButton: { flex: 1, backgroundColor: '#557A6D', borderRadius: 12, padding: 16, alignItems: 'center' },
   saveButtonDisabled: { opacity: 0.5 },
   saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

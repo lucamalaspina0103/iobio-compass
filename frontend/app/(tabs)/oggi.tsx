@@ -359,7 +359,7 @@ export default function OggiScreen() {
                 <Text style={styles.scoreLabel}>Il tuo Indice IOBIO</Text>
                 <Text style={styles.scoreValue}>{screeningResult.indice_iobio}</Text>
               </View>
-              <Ionicons name="leaf" size={48} color="#7CB342" />
+              <Ionicons name="leaf" size={48} color="#557A6D" />
             </View>
           )}
 
@@ -402,7 +402,7 @@ export default function OggiScreen() {
 
           {!todaysReflection && (
             <View style={styles.inviteRow}>
-              <Ionicons name="arrow-down" size={14} color="#7CB342" />
+              <Ionicons name="arrow-down" size={14} color="#557A6D" />
               <Text style={styles.inviteText}>
                 Prima il check-in, poi i task: insieme per il tuo benessere olistico
               </Text>
@@ -416,7 +416,7 @@ export default function OggiScreen() {
             <Ionicons
               name={todaysReflection ? 'checkmark-circle' : 'heart-circle'}
               size={32}
-              color="#7CB342"
+              color="#557A6D"
             />
             <View style={styles.checkinContent}>
               <Text style={styles.checkinTitle}>Check-in giornaliero</Text>
@@ -424,12 +424,12 @@ export default function OggiScreen() {
                 {todaysReflection ? 'Fatto per oggi · tocca per rifarlo' : '1 minuto per il tuo benessere'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+            <Ionicons name="chevron-forward" size={24} color="#557A6D" />
           </Pressable>
 
           {todaysReflection && (
             <Pressable style={styles.reflectionCard} onPress={() => setShowReflection(true)}>
-              <Ionicons name="help-circle" size={22} color="#7CB342" />
+              <Ionicons name="help-circle" size={22} color="#557A6D" />
               <View style={styles.taskContent}>
                 <Text style={styles.reflectionLabel}>Un pensiero per oggi</Text>
                 <Text style={styles.reflectionQuestion}>{todaysReflection.question}</Text>
@@ -441,24 +441,24 @@ export default function OggiScreen() {
             style={styles.coachButton}
             onPress={() => router.push('/(tabs)/aicoach')}
           >
-            <Ionicons name="chatbubble-ellipses" size={32} color="#7CB342" />
+            <Ionicons name="chatbubble-ellipses" size={32} color="#557A6D" />
             <View style={styles.checkinContent}>
               <Text style={styles.checkinTitle}>AI Coach</Text>
               <Text style={styles.checkinSubtitle}>Consigli e approfondimenti per te</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+            <Ionicons name="chevron-forward" size={24} color="#557A6D" />
           </Pressable>
 
           <Pressable
             style={styles.coachButton}
             onPress={() => router.push('/diario')}
           >
-            <Ionicons name="book" size={32} color="#7CB342" />
+            <Ionicons name="book" size={32} color="#557A6D" />
             <View style={styles.checkinContent}>
               <Text style={styles.checkinTitle}>Il tuo diario</Text>
               <Text style={styles.checkinSubtitle}>Scrivi liberamente o rivedi le tue voci</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+            <Ionicons name="chevron-forward" size={24} color="#557A6D" />
           </Pressable>
 
           <View style={styles.section}>
@@ -474,7 +474,7 @@ export default function OggiScreen() {
 
                 {todaySucceeded ? (
                   <View style={styles.successBanner}>
-                    <Ionicons name="checkmark-circle" size={18} color="#7CB342" />
+                    <Ionicons name="checkmark-circle" size={18} color="#557A6D" />
                     <Text style={styles.successText}>Giornata riuscita, sei a posto!</Text>
                   </View>
                 ) : (
@@ -523,7 +523,7 @@ export default function OggiScreen() {
 
                 <Pressable style={styles.planLink} onPress={() => router.push('/piano')}>
                   <Text style={styles.planLinkText}>Vedi tutto il piano 30 giorni</Text>
-                  <Ionicons name="arrow-forward" size={16} color="#7CB342" />
+                  <Ionicons name="arrow-forward" size={16} color="#557A6D" />
                 </Pressable>
               </>
             ) : (
@@ -667,7 +667,7 @@ export default function OggiScreen() {
       >
         <View style={styles.reflectionOverlay}>
           <View style={styles.reflectionModalContent}>
-            <Ionicons name="checkmark-circle" size={40} color="#7CB342" />
+            <Ionicons name="checkmark-circle" size={40} color="#557A6D" />
             <Text style={styles.reflectionModalTitle}>Check-in completato!</Text>
             <Text style={styles.reflectionModalHint}>
               Non una risposta, solo una domanda per fermarti un attimo:
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
   scoreValue: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   weeklyCard: {
     backgroundColor: '#FFF8E1',
@@ -913,14 +913,14 @@ const styles = StyleSheet.create({
   },
   inviteText: {
     fontSize: 12,
-    color: '#7CB342',
+    color: '#557A6D',
     fontWeight: '600',
     textAlign: 'center',
   },
   reflectionCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#F1F8E9',
+    backgroundColor: '#EEF4F1',
     borderRadius: 16,
     padding: 16,
     marginTop: -12,
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
   reflectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#7CB342',
+    color: '#557A6D',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 2,
@@ -983,7 +983,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   reflectionModalButton: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 32,
@@ -1031,17 +1031,17 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
   },
   progressText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 10,
     padding: 10,
     marginBottom: 12,
@@ -1050,7 +1050,7 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4A7A2E',
+    color: '#3F5E52',
   },
   requiredBanner: {
     flexDirection: 'row',
@@ -1085,13 +1085,13 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   checkboxChecked: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
   },
   taskContent: {
     flex: 1,
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
   planLinkText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   tomorrowSection: {
     backgroundColor: '#FFFFFF',
@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E8F5E9',
+    borderColor: '#E4EEEA',
     borderStyle: 'dashed',
   },
   tomorrowTitle: {
@@ -1218,8 +1218,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scaleButtonSelected: {
-    backgroundColor: '#7CB342',
-    borderColor: '#7CB342',
+    backgroundColor: '#557A6D',
+    borderColor: '#557A6D',
   },
   scaleButtonText: {
     fontSize: 20,
@@ -1230,7 +1230,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   submitButton: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

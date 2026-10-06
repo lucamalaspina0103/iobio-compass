@@ -84,7 +84,7 @@ export default function MappaScreen() {
   });
 
   const getJourneyStage = (score: number) => {
-    if (score >= 70) return { stage: 'Fioritura', icon: 'flower', color: '#7CB342', description: 'Il tuo benessere è in piena fioritura!' };
+    if (score >= 70) return { stage: 'Fioritura', icon: 'flower', color: '#557A6D', description: 'Il tuo benessere è in piena fioritura!' };
     if (score >= 40) return { stage: 'Crescita', icon: 'leaf', color: '#FFA726', description: 'Stai crescendo bene, continua così!' };
     return { stage: 'Semina', icon: 'water', color: '#42A5F5', description: 'Stai piantando i semi del benessere' };
   };
@@ -126,7 +126,7 @@ export default function MappaScreen() {
                         borderBottomColor: '#F0F0F0'
                       }}>
                         <Text style={{ color: '#4A4A4A', fontSize: 14 }}>{getAreaInfo(area).name}</Text>
-                        <Text style={{ color: '#7CB342', fontSize: 14, fontWeight: '600' }}>
+                        <Text style={{ color: '#557A6D', fontSize: 14, fontWeight: '600' }}>
                           {screeningResult.area_scores[area]}/100
                         </Text>
                       </View>
@@ -176,9 +176,9 @@ export default function MappaScreen() {
                       })}
                       style={{
                         data: {
-                          fill: '#7CB342',
+                          fill: '#557A6D',
                           fillOpacity: 0.3,
-                          stroke: '#7CB342',
+                          stroke: '#557A6D',
                           strokeWidth: 2,
                         },
                       }}
@@ -194,7 +194,7 @@ export default function MappaScreen() {
             const last = screeningHistory[screeningHistory.length - 1];
             const delta = last.indice_iobio - first.indice_iobio;
             const shown = screeningHistory.slice(-10); // ultimi 10, per non affollare
-            const deltaColor = delta > 0 ? '#7CB342' : delta < 0 ? '#EF5350' : '#999';
+            const deltaColor = delta > 0 ? '#557A6D' : delta < 0 ? '#EF5350' : '#999';
             const deltaIcon = delta > 0 ? 'trending-up' : delta < 0 ? 'trending-down' : 'remove';
 
             return (
@@ -226,7 +226,7 @@ export default function MappaScreen() {
                           <View
                             style={[
                               styles.barFill,
-                              { height: `${barHeight}%`, backgroundColor: isLast ? '#7CB342' : '#C5E1A5' },
+                              { height: `${barHeight}%`, backgroundColor: isLast ? '#557A6D' : '#BCD3C9' },
                             ]}
                           />
                         </View>
@@ -272,7 +272,7 @@ export default function MappaScreen() {
                   <VictoryLine
                     data={trendData}
                     style={{
-                      data: { stroke: '#7CB342', strokeWidth: 3 },
+                      data: { stroke: '#557A6D', strokeWidth: 3 },
                     }}
                     interpolation="natural"
                   />
@@ -308,7 +308,7 @@ export default function MappaScreen() {
             </View>
 
             <View style={styles.stageItem}>
-              <Ionicons name="flower" size={32} color="#7CB342" />
+              <Ionicons name="flower" size={32} color="#557A6D" />
               <View style={styles.stageContent}>
                 <Text style={styles.stageName}>Fioritura</Text>
                 <Text style={styles.stageText}>Il tuo benessere è in piena fioritura, continua a coltivarlo</Text>

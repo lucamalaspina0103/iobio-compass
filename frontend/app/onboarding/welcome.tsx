@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 20,
-    color: '#7CB342',
+    color: '#557A6D',
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

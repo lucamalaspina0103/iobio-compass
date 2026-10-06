@@ -32,11 +32,11 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
-  checkboxChecked: { backgroundColor: '#7CB342' },
+  checkboxChecked: { backgroundColor: '#557A6D' },
   text: { flex: 1, fontSize: 13, color: '#4A4A4A', lineHeight: 19 },
 });

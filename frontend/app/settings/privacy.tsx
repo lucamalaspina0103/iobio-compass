@@ -55,7 +55,7 @@ export default function PrivacyScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
-            <Ionicons name="shield-checkmark" size={40} color="#7CB342" />
+            <Ionicons name="shield-checkmark" size={40} color="#557A6D" />
           </View>
           <Text style={styles.heroText}>
             La tua privacy è importante. Controlla come vengono utilizzati i tuoi dati.
@@ -66,7 +66,7 @@ export default function PrivacyScreen() {
 
         <View style={styles.card}>
           <View style={styles.iconContainer}>
-            <Ionicons name="bar-chart" size={22} color="#7CB342" />
+            <Ionicons name="bar-chart" size={22} color="#557A6D" />
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.cardTitle}>Dati anonimi di utilizzo</Text>
@@ -75,14 +75,14 @@ export default function PrivacyScreen() {
           <Switch
             value={settings.analytics}
             onValueChange={() => toggle('analytics')}
-            trackColor={{ false: '#E0E0E0', true: '#AED581' }}
-            thumbColor={settings.analytics ? '#7CB342' : '#f4f3f4'}
+            trackColor={{ false: '#E0E0E0', true: '#9DBDB0' }}
+            thumbColor={settings.analytics ? '#557A6D' : '#f4f3f4'}
           />
         </View>
 
         <View style={styles.card}>
           <View style={styles.iconContainer}>
-            <Ionicons name="sparkles" size={22} color="#7CB342" />
+            <Ionicons name="sparkles" size={22} color="#557A6D" />
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.cardTitle}>Personalizzazione</Text>
@@ -91,8 +91,8 @@ export default function PrivacyScreen() {
           <Switch
             value={settings.personalization}
             onValueChange={() => toggle('personalization')}
-            trackColor={{ false: '#E0E0E0', true: '#AED581' }}
-            thumbColor={settings.personalization ? '#7CB342' : '#f4f3f4'}
+            trackColor={{ false: '#E0E0E0', true: '#9DBDB0' }}
+            thumbColor={settings.personalization ? '#557A6D' : '#f4f3f4'}
           />
         </View>
 
@@ -114,7 +114,7 @@ export default function PrivacyScreen() {
         </View>
 
         <View style={styles.noteBox}>
-          <Ionicons name="lock-closed" size={20} color="#7CB342" />
+          <Ionicons name="lock-closed" size={20} color="#557A6D" />
           <Text style={styles.noteText}>
             IOBIO Compass è uno strumento di benessere e non sostituisce il parere medico professionale.
           </Text>
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -190,10 +190,10 @@ const styles = StyleSheet.create({
   infoParagraph: { fontSize: 14, color: '#4A4A4A', lineHeight: 22, marginBottom: 10 },
   noteBox: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 12,
     padding: 16,
     alignItems: 'flex-start',
   },
-  noteText: { flex: 1, fontSize: 13, color: '#558B2F', marginLeft: 10, lineHeight: 19 },
+  noteText: { flex: 1, fontSize: 13, color: '#3F5E52', marginLeft: 10, lineHeight: 19 },
 });

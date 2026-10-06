@@ -64,7 +64,7 @@ export default function ResultsScreen() {
     if (score >= 80) return {
       title: 'Eccellente!',
       description: 'Il tuo benessere è in ottima forma. Continua con le tue buone abitudini!',
-      color: ['#7CB342', '#9CCC65'],
+      color: ['#557A6D', '#8FB3A5'],
       icon: 'trophy',
     };
     if (score >= 60) return {
@@ -179,7 +179,7 @@ export default function ResultsScreen() {
                   💡 {AREA_ACTIONS[area] || 'Un piccolo gesto al giorno fa la differenza'}
                 </Text>
                 <View style={styles.addButton}>
-                  <Ionicons name="checkmark-circle" size={20} color="#7CB342" />
+                  <Ionicons name="checkmark-circle" size={20} color="#557A6D" />
                   <Text style={styles.addButtonText}>Già nel tuo piano</Text>
                 </View>
               </View>
@@ -192,7 +192,7 @@ export default function ResultsScreen() {
           >
             <View style={styles.soundCardLeft}>
               <View style={styles.soundIconBg}>
-                <Ionicons name="musical-notes" size={24} color="#7CB342" />
+                <Ionicons name="musical-notes" size={24} color="#557A6D" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.soundCardTitle}>Ascolta la tua sessione consigliata</Text>
@@ -201,7 +201,7 @@ export default function ResultsScreen() {
                 </Text>
               </View>
             </View>
-            <Ionicons name="arrow-forward-circle" size={28} color="#7CB342" />
+            <Ionicons name="arrow-forward-circle" size={28} color="#557A6D" />
           </Pressable>
 
           {!isWeb && (
@@ -242,9 +242,9 @@ export default function ResultsScreen() {
                   data={chartData}
                   style={{
                     data: {
-                      fill: '#7CB342',
+                      fill: '#557A6D',
                       fillOpacity: 0.3,
-                      stroke: '#7CB342',
+                      stroke: '#557A6D',
                       strokeWidth: 2,
                     },
                   }}
@@ -282,7 +282,7 @@ export default function ResultsScreen() {
 }
 
 const styles = StyleSheet.create({
-  quickNote: { textAlign: 'center', color: '#7CB342', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  quickNote: { textAlign: 'center', color: '#557A6D', fontSize: 13, fontWeight: '600', marginTop: 12 },
   compareCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   compareTitle: { fontSize: 15, fontWeight: '700', color: '#4A4A4A' },
   compareDelta: { fontSize: 15, color: '#4A4A4A' },
-  compareGood: { fontSize: 13, color: '#558B2F', lineHeight: 19 },
+  compareGood: { fontSize: 13, color: '#3F5E52', lineHeight: 19 },
   compareWatch: { fontSize: 13, color: '#8D6E63', lineHeight: 19 },
   container: {
     flex: 1,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   focusScore: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   focusAction: {
     fontSize: 14,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     borderRadius: 8,
     padding: 10,
     gap: 8,
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7CB342',
+    color: '#557A6D',
   },
   chartCard: {
     backgroundColor: '#FFFFFF',
@@ -468,24 +468,24 @@ const styles = StyleSheet.create({
   },
   areaRowFill: {
     height: '100%',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
   },
   areaRowScore: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#7CB342',
+    color: '#557A6D',
     width: 30,
     textAlign: 'right',
   },
   ctaButton: {
     flexDirection: 'row',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    shadowColor: '#7CB342',
+    shadowColor: '#557A6D',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -505,12 +505,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F1F8E9',
+    backgroundColor: '#EEF4F1',
     borderRadius: 16,
     padding: 18,
     marginBottom: 24,
     borderWidth: 1.5,
-    borderColor: '#AED581',
+    borderColor: '#9DBDB0',
   },
   soundCardLeft: {
     flexDirection: 'row',
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
   },

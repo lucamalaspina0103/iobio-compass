@@ -131,7 +131,7 @@ export default function ProfiloScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.avatarContainer}>
-              <Ionicons name="person" size={48} color="#7CB342" />
+              <Ionicons name="person" size={48} color="#557A6D" />
             </View>
             <Text style={styles.userName}>
               {isGuest ? 'Utente Guest' : user?.email}
@@ -154,7 +154,7 @@ export default function ProfiloScreen() {
                   Crea un account gratuito: piano, stelle e storico restano al sicuro.
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#7CB342" />
+              <Ionicons name="chevron-forward" size={24} color="#557A6D" />
             </Pressable>
           )}
 
@@ -180,7 +180,7 @@ export default function ProfiloScreen() {
             
             <Pressable style={styles.menuItem} onPress={handleRetakeScreening}>
               <View style={styles.menuIconContainer}>
-                <Ionicons name="clipboard" size={24} color="#7CB342" />
+                <Ionicons name="clipboard" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Rifai lo screening</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -188,7 +188,7 @@ export default function ProfiloScreen() {
 
             <Pressable style={styles.menuItem} onPress={handleQuickCheck}>
               <View style={styles.menuIconContainer}>
-                <Ionicons name="pulse" size={24} color="#7CB342" />
+                <Ionicons name="pulse" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>{isVeteran ? 'Revisione del mese (5 minuti)' : 'Controllo rapido (2 minuti)'}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -202,7 +202,7 @@ export default function ProfiloScreen() {
               }}
             >
               <View style={styles.menuIconContainer}>
-                <Ionicons name="calendar" size={24} color="#7CB342" />
+                <Ionicons name="calendar" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Piano 30 giorni</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -213,7 +213,7 @@ export default function ProfiloScreen() {
               onPress={() => router.push('/(tabs)/mappa')}
             >
               <View style={styles.menuIconContainer}>
-                <Ionicons name="trending-up" size={24} color="#7CB342" />
+                <Ionicons name="trending-up" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Progressi</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -224,7 +224,7 @@ export default function ProfiloScreen() {
               onPress={() => router.push('/diario')}
             >
               <View style={styles.menuIconContainer}>
-                <Ionicons name="book" size={24} color="#7CB342" />
+                <Ionicons name="book" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Il tuo diario</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -239,7 +239,7 @@ export default function ProfiloScreen() {
               onPress={() => router.push('/settings/notifications')}
             >
               <View style={styles.menuIconContainer}>
-                <Ionicons name="notifications" size={24} color="#7CB342" />
+                <Ionicons name="notifications" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Notifiche</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -250,7 +250,7 @@ export default function ProfiloScreen() {
               onPress={() => router.push('/settings/privacy')}
             >
               <View style={styles.menuIconContainer}>
-                <Ionicons name="lock-closed" size={24} color="#7CB342" />
+                <Ionicons name="lock-closed" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Privacy</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -261,7 +261,7 @@ export default function ProfiloScreen() {
               onPress={() => router.push('/support')}
             >
               <View style={styles.menuIconContainer}>
-                <Ionicons name="help-circle" size={24} color="#7CB342" />
+                <Ionicons name="help-circle" size={24} color="#557A6D" />
               </View>
               <Text style={styles.menuText}>Aiuto e supporto</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
@@ -307,7 +307,7 @@ export default function ProfiloScreen() {
           )}
 
           <View style={styles.footer}>
-            <Ionicons name="leaf" size={24} color="#7CB342" />
+            <Ionicons name="leaf" size={24} color="#557A6D" />
             <Text style={styles.footerText}>IOBIO Compass</Text>
             <Text style={styles.footerSubtext}>Benessere Olistico</Text>
           </View>
@@ -323,7 +323,7 @@ export default function ProfiloScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIcon}>
-              <Ionicons name="clipboard" size={48} color="#7CB342" />
+              <Ionicons name="clipboard" size={48} color="#557A6D" />
             </View>
             <Text style={styles.modalTitle}>Rifai lo screening</Text>
             <Text style={styles.modalText}>
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#7CB342',
+    color: '#557A6D',
     marginBottom: 4,
   },
   statLabel: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   },
   buildLabel: {
     fontSize: 11,
-    color: '#7CB342',
+    color: '#557A6D',
     marginTop: 8,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
   },
   modalButtonPrimary: {
     width: '100%',
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
@@ -799,19 +799,19 @@ const styles = StyleSheet.create({
   saveCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F8E9',
+    backgroundColor: '#EEF4F1',
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
     gap: 12,
   },
   saveIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     alignItems: 'center',
     justifyContent: 'center',
   },

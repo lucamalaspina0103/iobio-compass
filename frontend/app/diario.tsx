@@ -101,13 +101,13 @@ export default function DiarioScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Il tuo diario</Text>
         <Pressable onPress={() => setAdding(true)} style={styles.addButton}>
-          <Ionicons name="add" size={26} color="#7CB342" />
+          <Ionicons name="add" size={26} color="#557A6D" />
         </Pressable>
       </View>
 
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#7CB342" />
+          <ActivityIndicator size="large" color="#557A6D" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#4A4A4A', marginTop: 16, marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#999', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  emptyButton: { backgroundColor: '#7CB342', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24 },
+  emptyButton: { backgroundColor: '#557A6D', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24 },
   emptyButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
   entryCard: {
     backgroundColor: '#FFFFFF',

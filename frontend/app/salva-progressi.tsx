@@ -88,7 +88,7 @@ export default function SalvaProgressiScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.doneWrap}>
           <View style={styles.doneIcon}>
-            <Ionicons name="shield-checkmark" size={56} color="#7CB342" />
+            <Ionicons name="shield-checkmark" size={56} color="#557A6D" />
           </View>
           <Text style={styles.title}>I tuoi progressi sono al sicuro</Text>
           <Text style={styles.subtitle}>
@@ -116,7 +116,7 @@ export default function SalvaProgressiScreen() {
 
           <View style={styles.content}>
             <View style={styles.iconWrap}>
-              <Ionicons name="cloud-upload" size={40} color="#7CB342" />
+              <Ionicons name="cloud-upload" size={40} color="#557A6D" />
             </View>
             <Text style={styles.title}>Salva i tuoi progressi</Text>
             <Text style={styles.subtitle}>
@@ -126,7 +126,7 @@ export default function SalvaProgressiScreen() {
             <View style={styles.benefits}>
               {BENEFITS.map(text => (
                 <View key={text} style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={20} color="#7CB342" />
+                  <Ionicons name="checkmark-circle" size={20} color="#557A6D" />
                   <Text style={styles.benefitText}>{text}</Text>
                 </View>
               ))}
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   errorText: { flex: 1, color: '#C62828', fontSize: 14, lineHeight: 20 },
   button: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -250,13 +250,13 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
-  laterText: { color: '#7CB342', textAlign: 'center', marginTop: 16, fontSize: 15 },
+  laterText: { color: '#557A6D', textAlign: 'center', marginTop: 16, fontSize: 15 },
   doneWrap: { flex: 1, padding: 24, justifyContent: 'center' },
   doneIcon: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',

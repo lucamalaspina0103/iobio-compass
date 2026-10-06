@@ -59,7 +59,7 @@ export default function SupportScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
-            <Ionicons name="help-buoy" size={40} color="#7CB342" />
+            <Ionicons name="help-buoy" size={40} color="#557A6D" />
           </View>
           <Text style={styles.heroText}>Come possiamo aiutarti?</Text>
         </View>
@@ -78,7 +78,7 @@ export default function SupportScreen() {
               <Ionicons
                 name={openIndex === i ? 'chevron-up' : 'chevron-down'}
                 size={20}
-                color="#7CB342"
+                color="#557A6D"
               />
             </View>
             {openIndex === i && <Text style={styles.faqAnswer}>{faq.a}</Text>}
@@ -89,7 +89,7 @@ export default function SupportScreen() {
 
         <TouchableOpacity style={styles.contactCard} onPress={contactEmail}>
           <View style={styles.iconContainer}>
-            <Ionicons name="mail" size={22} color="#7CB342" />
+            <Ionicons name="mail" size={22} color="#557A6D" />
           </View>
           <View style={styles.textContainer}>
             <Text style={styles.cardTitle}>Scrivici via email</Text>
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E4EEEA',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,

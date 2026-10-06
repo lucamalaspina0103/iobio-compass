@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   button: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   switchText: {
-    color: '#7CB342',
+    color: '#557A6D',
     textAlign: 'center',
     marginTop: 16,
     fontSize: 14,
@@ -283,10 +283,10 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#7CB342',
+    borderColor: '#557A6D',
   },
   guestButtonText: {
-    color: '#7CB342',
+    color: '#557A6D',
     fontSize: 18,
     fontWeight: '600',
   },

@@ -81,7 +81,7 @@ export default function AICoachScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Ionicons name="sparkles" size={32} color="#7CB342" />
+          <Ionicons name="sparkles" size={32} color="#557A6D" />
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>AI Coach</Text>
             <Text style={styles.headerSubtitle}>Il tuo assistente per il benessere</Text>
@@ -112,7 +112,7 @@ export default function AICoachScreen() {
               ]}
             >
               {message.role === 'assistant' && (
-                <Ionicons name="leaf" size={20} color="#7CB342" style={styles.messageIcon} />
+                <Ionicons name="leaf" size={20} color="#557A6D" style={styles.messageIcon} />
               )}
               <View style={styles.messageContent}>
                 <Text
@@ -128,7 +128,7 @@ export default function AICoachScreen() {
           ))}
           {loading && (
             <View style={[styles.messageBubble, styles.assistantBubble]}>
-              <Ionicons name="leaf" size={20} color="#7CB342" style={styles.messageIcon} />
+              <Ionicons name="leaf" size={20} color="#557A6D" style={styles.messageIcon} />
               <View style={styles.messageContent}>
                 <Text style={styles.assistantText}>Sto pensando...</Text>
               </View>
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   userText: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     color: '#FFFFFF',
     borderBottomRightRadius: 4,
   },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sendButton: {
-    backgroundColor: '#7CB342',
+    backgroundColor: '#557A6D',
     width: 48,
     height: 48,
     borderRadius: 24,
