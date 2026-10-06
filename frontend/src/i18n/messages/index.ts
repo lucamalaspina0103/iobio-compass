@@ -2,11 +2,12 @@ import type { Dict, LangCode } from '../core';
 import { base } from './base';
 import { auth } from './auth';
 import { questionnaire } from './questionnaire';
+import { results } from './results';
 
 // Ogni file raggruppa le frasi di una zona dell'app, con le cinque lingue affiancate.
 export type Messages = Record<LangCode, Dict>;
 
-const PARTS: Messages[] = [base, auth, questionnaire];
+const PARTS: Messages[] = [base, auth, questionnaire, results];
 
 export const MESSAGES: Messages = { it: {}, en: {}, fr: {}, es: {}, de: {} };
 for (const part of PARTS) {

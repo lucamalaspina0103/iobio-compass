@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getAreaInfo } from '../../src/lib/pianoPlan';
 import { loadPreviousScreening, ScreeningHistoryEntry } from '../../src/lib/screeningHistory';
 import { parseDate } from '../../src/lib/checkDue';
+import { useI18n } from '../../src/i18n';
 
 // Conditionally import victory-native only on mobile
 let VictoryPolarAxis: any = null;
@@ -27,18 +28,9 @@ if (Platform.OS !== 'web') {
 
 const isWeb = Platform.OS === 'web';
 
-const AREA_ACTIONS: { [key: string]: string } = {
-  energia: 'Inizia la giornata con 10 minuti di movimento',
-  sonno: 'Crea una routine serale rilassante',
-  stress: 'Pratica 5 minuti di respirazione profonda',
-  movimento: 'Aggiungi una camminata di 15 minuti',
-  alimentazione: 'Pianifica pasti sani per la settimana',
-  pelle: 'Prenditi cura di sonno, idratazione e alimentazione',
-  equilibrio_mentale: 'Dedica qualche minuto alla mindfulness',
-};
-
 export default function ResultsScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, isGuest, screeningResult } = useAppContext();
   const [previous, setPrevious] = useState<ScreeningHistoryEntry | null>(null);
 
@@ -52,7 +44,7 @@ export default function ResultsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.errorText}>Nessun risultato disponibile</Text>
+          <Text style={styles.errorText}>{t('results.none')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -62,26 +54,26 @@ export default function ResultsScreen() {
 
   const getScoreInterpretation = (score: number) => {
     if (score >= 80) return {
-      title: 'Eccellente!',
-      description: 'Il tuo benessere è in ottima forma. Continua con le tue buone abitudini!',
+      title: t('results.excellent.title'),
+      description: t('results.excellent.desc'),
       color: ['#557A6D', '#8FB3A5'],
       icon: 'trophy',
     };
     if (score >= 60) return {
-      title: 'Buon Livello',
-      description: 'Hai una buona base di benessere. Con piccoli miglioramenti puoi eccellere!',
+      title: t('results.good.title'),
+      description: t('results.good.desc'),
       color: ['#FFA726', '#FFB74D'],
       icon: 'star',
     };
     if (score >= 40) return {
-      title: 'In Crescita',
-      description: 'Ci sono margini di miglioramento. Il piano personalizzato ti aiuterà!',
+      title: t('results.growing.title'),
+      description: t('results.growing.desc'),
       color: ['#42A5F5', '#64B5F6'],
       icon: 'trending-up',
     };
     return {
-      title: 'Inizia Ora',
-      description: 'Questo è il momento perfetto per investire nel tuo benessere. Ogni passo conta!',
+      title: t('results.start.title'),
+      description: t('results.start.desc'),
       color: ['#EF5350', '#E57373'],
       icon: 'leaf',
     };
@@ -105,7 +97,7 @@ export default function ResultsScreen() {
     : 0;
 
   const chartData = Object.keys(area_scores).map(area => ({
-    x: area.length > 15 ? area.substring(0, 12) + '...' : area,
+    x: getAreaInfo(area).name,
     y: area_scores[area],
   }));
 
@@ -114,7 +106,7 @@ export default function ResultsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <LinearGradient
-            colors={interpretation.color}
+            colors={interpretation.color as [string, string]}
             style={styles.scoreCard}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -123,46 +115,46 @@ export default function ResultsScreen() {
             <Text style={styles.scoreCardTitle}>{interpretation.title}</Text>
             <View style={styles.scoreCircle}>
               <Text style={styles.scoreValue}>{indice_iobio}</Text>
-              <Text style={styles.scoreLabel}>Indice IOBIO</Text>
+              <Text style={styles.scoreLabel}>{t('results.index')}</Text>
             </View>
             <Text style={styles.scoreDescription}>{interpretation.description}</Text>
           </LinearGradient>
 
           {isQuick && (
-            <Text style={styles.quickNote}>Controllo rapido · il piano è stato aggiornato da oggi in poi</Text>
+            <Text style={styles.quickNote}>{t('results.quickNote')}</Text>
           )}
           {isReview && (
-            <Text style={styles.quickNote}>Revisione del mese · il tuo prossimo mese parte con le aree che hai scelto</Text>
+            <Text style={styles.quickNote}>{t('results.reviewNote')}</Text>
           )}
 
           {previous && (
             <View style={styles.compareCard}>
               <Text style={styles.compareTitle}>
-                Rispetto all'ultimo controllo{daysAgo > 0 ? ` (${daysAgo} ${daysAgo === 1 ? 'giorno' : 'giorni'} fa)` : ''}
+                {t('results.compareTitle')}{daysAgo > 0 ? ` (${t('results.daysAgo', { count: daysAgo })})` : ''}
               </Text>
               <Text style={styles.compareDelta}>
-                Indice IOBIO: {previous.indice_iobio} → {indice_iobio}
-                {delta > 0 ? `  (+${delta})` : delta < 0 ? `  (${delta})` : '  (stabile)'}
+                {t('results.index')}: {previous.indice_iobio} → {indice_iobio}
+                {delta > 0 ? `  (+${delta})` : delta < 0 ? `  (${delta})` : `  (${t('results.stable')})`}
               </Text>
               {grew.length > 0 && (
                 <Text style={styles.compareGood}>
-                  In crescita: {grew.map(x => `${getAreaInfo(x.area).name} +${x.diff}`).join(' · ')}
+                  {t('results.grew')} {grew.map(x => `${getAreaInfo(x.area).name} +${x.diff}`).join(' · ')}
                 </Text>
               )}
               {toWatch.length > 0 && (
                 <Text style={styles.compareWatch}>
-                  Da seguire: {toWatch.map(x => getAreaInfo(x.area).name).join(' · ')}
+                  {t('results.toWatch')} {toWatch.map(x => getAreaInfo(x.area).name).join(' · ')}
                 </Text>
               )}
               {areaChanges.length === 0 && (
-                <Text style={styles.compareWatch}>Nessun cambiamento: la costanza è già un risultato.</Text>
+                <Text style={styles.compareWatch}>{t('results.noChange')}</Text>
               )}
             </View>
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{isReview ? 'I tuoi focus del mese' : 'I tuoi Top 3 Focus'}</Text>
-            <Text style={styles.sectionSubtitle}>{isReview ? 'Le aree che hai scelto tu' : "Aree dove concentrare l'attenzione"}</Text>
+            <Text style={styles.sectionTitle}>{isReview ? t('results.focusReview') : t('results.focusTop3')}</Text>
+            <Text style={styles.sectionSubtitle}>{isReview ? t('results.focusSubReview') : t('results.focusSubTop')}</Text>
 
             {weak_areas.map((area, index) => (
               <View key={index} style={styles.focusCard}>
@@ -176,11 +168,11 @@ export default function ResultsScreen() {
                   </View>
                 </View>
                 <Text style={styles.focusAction}>
-                  💡 {AREA_ACTIONS[area] || 'Un piccolo gesto al giorno fa la differenza'}
+                  💡 {t(`results.action.${area}`) !== `results.action.${area}` ? t(`results.action.${area}`) : t('results.action.default')}
                 </Text>
                 <View style={styles.addButton}>
                   <Ionicons name="checkmark-circle" size={20} color="#557A6D" />
-                  <Text style={styles.addButtonText}>Già nel tuo piano</Text>
+                  <Text style={styles.addButtonText}>{t('results.inPlan')}</Text>
                 </View>
               </View>
             ))}
@@ -195,9 +187,9 @@ export default function ResultsScreen() {
                 <Ionicons name="musical-notes" size={24} color="#557A6D" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.soundCardTitle}>Ascolta la tua sessione consigliata</Text>
+                <Text style={styles.soundCardTitle}>{t('results.soundTitle')}</Text>
                 <Text style={styles.soundCardSub}>
-                  Frequenze selezionate per {getAreaInfo(weak_areas[0]).name}
+                  {t('results.soundSub', { area: getAreaInfo(weak_areas[0]).name })}
                 </Text>
               </View>
             </View>
@@ -206,7 +198,7 @@ export default function ResultsScreen() {
 
           {!isWeb && (
             <View style={styles.chartCard}>
-              <Text style={styles.sectionTitle}>Panoramica Completa</Text>
+              <Text style={styles.sectionTitle}>{t('results.overview')}</Text>
               <VictoryChart
                 polar
                 domain={{ y: [0, 100] }}
@@ -233,9 +225,10 @@ export default function ResultsScreen() {
                     grid: { stroke: '#E0E0E0', strokeWidth: 1 },
                   }}
                   tickValues={Object.keys(area_scores).map((_, i) => i + 1)}
-                  tickFormat={(t) => {
-                    const area = Object.keys(area_scores)[t - 1];
-                    return area && area.length > 12 ? area.substring(0, 10) + '...' : area;
+                  tickFormat={(tick: number) => {
+                    const area = Object.keys(area_scores)[tick - 1];
+                    const name = area ? getAreaInfo(area).name : '';
+                    return name.length > 12 ? name.substring(0, 10) + '...' : name;
                   }}
                 />
                 <VictoryArea
@@ -255,7 +248,7 @@ export default function ResultsScreen() {
 
           {isWeb && (
             <View style={styles.chartCard}>
-              <Text style={styles.sectionTitle}>Tutte le Aree</Text>
+              <Text style={styles.sectionTitle}>{t('results.allAreas')}</Text>
               {Object.keys(area_scores).map((area, index) => (
                 <View key={index} style={styles.areaRow}>
                   <Text style={styles.areaRowName}>{getAreaInfo(area).name}</Text>
@@ -272,7 +265,7 @@ export default function ResultsScreen() {
             style={styles.ctaButton}
             onPress={() => router.replace('/(tabs)/oggi')}
           >
-            <Text style={styles.ctaButtonText}>Vai al Piano Personalizzato</Text>
+            <Text style={styles.ctaButtonText}>{t('results.cta')}</Text>
             <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
           </Pressable>
         </View>
