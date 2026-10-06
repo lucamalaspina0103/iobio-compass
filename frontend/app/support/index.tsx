@@ -43,7 +43,7 @@ export default function SupportScreen() {
   };
 
   const contactEmail = () => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Supporto IOBIO Compass`);
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Supporto IOBIO`);
   };
 
   return (
@@ -101,7 +101,7 @@ export default function SupportScreen() {
         <View style={styles.noteBox}>
           <Ionicons name="information-circle" size={20} color="#F57C00" />
           <Text style={styles.noteText}>
-            IOBIO Compass è uno strumento di benessere e non sostituisce il parere di un medico o professionista sanitario.
+            IOBIO è uno strumento di benessere e non sostituisce il parere di un medico o professionista sanitario.
           </Text>
         </View>
       </ScrollView>

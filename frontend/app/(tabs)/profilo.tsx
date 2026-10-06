@@ -308,7 +308,7 @@ export default function ProfiloScreen() {
 
           <View style={styles.footer}>
             <Ionicons name="leaf" size={24} color="#557A6D" />
-            <Text style={styles.footerText}>IOBIO Compass</Text>
+            <Text style={styles.footerText}>IOBIO</Text>
             <Text style={styles.footerSubtext}>Benessere Olistico</Text>
           </View>
         </View>

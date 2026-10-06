@@ -116,7 +116,7 @@ export default function PrivacyScreen() {
         <View style={styles.noteBox}>
           <Ionicons name="lock-closed" size={20} color="#557A6D" />
           <Text style={styles.noteText}>
-            IOBIO Compass è uno strumento di benessere e non sostituisce il parere medico professionale.
+            IOBIO è uno strumento di benessere e non sostituisce il parere medico professionale.
           </Text>
         </View>
       </ScrollView>

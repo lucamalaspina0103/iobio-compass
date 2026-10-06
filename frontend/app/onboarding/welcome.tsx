@@ -19,13 +19,13 @@ export default function WelcomeScreen() {
             />
           </View>
 
-          <Text style={styles.title}>Compass</Text>
+          <Text style={styles.title}>Natural Beauty - Eco Living</Text>
           <Text style={styles.subtitle}>Benessere Olistico</Text>
           
           <View style={styles.card}>
             <Text style={styles.disclaimerTitle}>Benvenuto!</Text>
             <Text style={styles.disclaimer}>
-              IOBIO Compass è uno strumento di screening per il benessere olistico.
+              IOBIO è uno strumento di screening per il benessere olistico.
             </Text>
             <Text style={styles.disclaimer}>
               Questo strumento non sostituisce diagnosi o pareri medici professionali.
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     height: 257,
   },
   title: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#4A4A4A',
     textAlign: 'center',
