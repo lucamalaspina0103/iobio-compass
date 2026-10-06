@@ -2,9 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useI18n } from '../../src/i18n';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -19,27 +21,21 @@ export default function WelcomeScreen() {
             />
           </View>
 
-          <Text style={styles.title}>Natural Beauty - Eco Living</Text>
-          <Text style={styles.subtitle}>Benessere Olistico</Text>
+          <Text style={styles.title}>{t('brand.claim')}</Text>
+          <Text style={styles.subtitle}>{t('brand.tagline')}</Text>
           
           <View style={styles.card}>
-            <Text style={styles.disclaimerTitle}>Benvenuto!</Text>
-            <Text style={styles.disclaimer}>
-              IOBIO è uno strumento di screening per il benessere olistico.
-            </Text>
-            <Text style={styles.disclaimer}>
-              Questo strumento non sostituisce diagnosi o pareri medici professionali.
-            </Text>
-            <Text style={styles.disclaimer}>
-              Per qualsiasi dubbio sulla tua salute, consulta sempre un medico qualificato.
-            </Text>
+            <Text style={styles.disclaimerTitle}>{t('welcome.title')}</Text>
+            <Text style={styles.disclaimer}>{t('welcome.p1')}</Text>
+            <Text style={styles.disclaimer}>{t('welcome.p2')}</Text>
+            <Text style={styles.disclaimer}>{t('welcome.p3')}</Text>
           </View>
 
           <TouchableOpacity 
             style={styles.button}
             onPress={() => router.push('/onboarding/auth')}
           >
-            <Text style={styles.buttonText}>Inizia</Text>
+            <Text style={styles.buttonText}>{t('welcome.start')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

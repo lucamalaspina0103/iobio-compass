@@ -7,6 +7,8 @@ import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getElapsedDays } from '../../src/lib/pianoPlan';
 import { useIsVeteran } from '../../src/lib/veteran';
+import { LANGUAGES, useI18n } from '../../src/i18n';
+import LanguagePickerModal from '../../src/components/LanguagePickerModal';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -17,6 +19,8 @@ export default function ProfiloScreen() {
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const isVeteran = useIsVeteran();
+  const { t, language } = useI18n();
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showGuestGateModal, setShowGuestGateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -233,8 +237,17 @@ export default function ProfiloScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Impostazioni</Text>
-            
-            <Pressable 
+
+            <Pressable style={styles.menuItem} onPress={() => setShowLanguageModal(true)}>
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="language" size={24} color="#557A6D" />
+              </View>
+              <Text style={styles.menuText}>{t('language.current')}</Text>
+              <Text style={{ color: '#888', marginRight: 6 }}>{LANGUAGES.find(l => l.code === language)?.name}</Text>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </Pressable>
+
+            <Pressable
               style={styles.menuItem}
               onPress={() => router.push('/settings/notifications')}
             >
@@ -380,6 +393,8 @@ export default function ProfiloScreen() {
           </View>
         </View>
       </Modal>
+
+      <LanguagePickerModal visible={showLanguageModal} onClose={() => setShowLanguageModal(false)} />
 
       <Modal
         visible={showLogoutModal}

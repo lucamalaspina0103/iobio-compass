@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { AppProvider } from '../src/contexts/AppContext';
+import { I18nProvider } from '../src/i18n';
 import { configureNotificationHandling } from '../src/lib/notificationsNative';
 
 export default function RootLayout() {
@@ -18,12 +19,14 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AppProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-    </AppProvider>
+    <I18nProvider>
+      <AppProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </AppProvider>
+    </I18nProvider>
   );
 }
