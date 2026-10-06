@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getIdea, getIdeaTitle } from '../lib/taskInteraction';
 import { IdeaKind, IdeaAction } from '../lib/ideaLibrary';
+import { taskText as translateTask } from '../lib/taskText';
+import { useI18n } from '../i18n';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -20,10 +22,11 @@ interface ResourceSuggestionModalProps {
 
 type Stage = 'choice' | 'suggestion' | 'custom';
 
-const CUSTOM_COPY: { [k in IdeaKind]: { question: string; placeholder: string } } = {
-  read: { question: 'Su quale argomento ti interessa un consiglio?', placeholder: 'es. ansia da lavoro, motivazione, autostima...' },
-  listen: { question: 'Su quale argomento ti interessa un consiglio?', placeholder: 'es. calma, motivazione, concentrazione...' },
-  try: { question: 'Che tipo di idea stai cercando?', placeholder: 'es. veloce, economica, da fare in casa...' },
+// Testo della domanda e segnaposto del campo libero, per tipo di idea (chiavi nei cataloghi)
+const CUSTOM_KEYS: { [k in IdeaKind]: { question: string; placeholder: string } } = {
+  read: { question: 'ideas.topicQ', placeholder: 'ideas.ph.read' },
+  listen: { question: 'ideas.topicQ', placeholder: 'ideas.ph.listen' },
+  try: { question: 'ideas.kindQ', placeholder: 'ideas.ph.try' },
 };
 
 const ICONS: { [k in IdeaKind]: string } = {
@@ -46,6 +49,7 @@ export default function ResourceSuggestionModal({
   onClose,
   onSaveToDiary,
 }: ResourceSuggestionModalProps) {
+  const { t, language } = useI18n();
   const [stage, setStage] = useState<Stage>('choice');
   const [offset, setOffset] = useState(0);
   const router = useRouter();
@@ -80,12 +84,12 @@ export default function ResourceSuggestionModal({
       const response = await fetch(`${API_URL}/api/suggest-resource`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, kind, task: taskText }),
+        body: JSON.stringify({ topic, kind, task: taskText, language }),
       });
       const data = await response.json();
       setSuggestion({ text: data.suggestion, fromAI: true });
     } catch (error) {
-      setSuggestion({ text: 'Non riesco a collegarmi in questo momento. Riprova tra poco.', fromAI: true });
+      setSuggestion({ text: t('ideas.offline'), fromAI: true });
     } finally {
       setSaved(false);
       setStage('suggestion');
@@ -105,7 +109,7 @@ export default function ResourceSuggestionModal({
         <ScrollView style={styles.card} contentContainerStyle={styles.cardContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Ionicons name={ICONS[kind] as any} size={22} color="#557A6D" />
-            <Text style={styles.headerTitle}>{taskText}</Text>
+            <Text style={styles.headerTitle}>{translateTask(taskText)}</Text>
             <Pressable onPress={onClose} hitSlop={8}>
               <Ionicons name="close" size={24} color="#999" />
             </Pressable>
@@ -113,13 +117,13 @@ export default function ResourceSuggestionModal({
 
           {stage === 'choice' && (
             <>
-              <Text style={styles.question}>Hai già in mente cosa fare?</Text>
+              <Text style={styles.question}>{t('ideas.haveIdea')}</Text>
               <Pressable style={styles.primaryButton} onPress={() => showCurated(0)}>
                 <Ionicons name="bulb" size={18} color="#FFFFFF" />
-                <Text style={styles.primaryButtonText}>Dammi un'idea</Text>
+                <Text style={styles.primaryButtonText}>{t('ideas.giveIdea')}</Text>
               </Pressable>
               <Pressable style={styles.secondaryButton} onPress={() => { onComplete(); onClose(); }}>
-                <Text style={styles.secondaryButtonText}>So già cosa fare, segna come fatto</Text>
+                <Text style={styles.secondaryButtonText}>{t('ideas.knowAlready')}</Text>
               </Pressable>
             </>
           )}
@@ -129,7 +133,7 @@ export default function ResourceSuggestionModal({
               {suggestion.fromAI ? (
                 <View style={styles.aiTag}>
                   <Ionicons name="sparkles" size={14} color="#557A6D" />
-                  <Text style={styles.aiTagText}>Suggerimento su misura</Text>
+                  <Text style={styles.aiTagText}>{t('ideas.tailored')}</Text>
                 </View>
               ) : (
                 <Text style={styles.ideaTitle}>{getIdeaTitle(taskText)}</Text>
@@ -152,7 +156,7 @@ export default function ResourceSuggestionModal({
                   }}
                 >
                   <Ionicons name="headset" size={18} color="#FFFFFF" />
-                  <Text style={styles.primaryButtonText}>{suggestion.action.label}</Text>
+                  <Text style={styles.primaryButtonText}>{suggestion.action.labelKey ? t(suggestion.action.labelKey) : suggestion.action.label}</Text>
                 </Pressable>
               )}
               <Pressable
@@ -161,21 +165,23 @@ export default function ResourceSuggestionModal({
               >
                 <Ionicons name="checkmark-circle" size={18} color={suggestion.action ? '#557A6D' : '#FFFFFF'} />
                 <Text style={suggestion.action ? styles.outlineButtonText : styles.primaryButtonText}>
-                  {suggestion.action ? (suggestion.action.doneLabel || 'Ho già ascoltato, segna come fatto') : 'Segna come fatto'}
+                  {suggestion.action
+                    ? (suggestion.action.doneLabelKey ? t(suggestion.action.doneLabelKey) : suggestion.action.doneLabel || t('ideas.doneListened'))
+                    : t('ideas.markDone')}
                 </Text>
               </Pressable>
               {!suggestion.fromAI && (
                 <Pressable style={styles.secondaryButton} onPress={() => showCurated(offset + 1)}>
-                  <Text style={styles.secondaryButtonText}>Un'altra idea</Text>
+                  <Text style={styles.secondaryButtonText}>{t('ideas.another')}</Text>
                 </Pressable>
               )}
               <Pressable style={styles.secondaryButton} onPress={handleSaveToDiary} disabled={saved}>
-                <Text style={styles.secondaryButtonText}>{saved ? 'Salvato nel diario ✓' : 'Salva nel diario'}</Text>
+                <Text style={styles.secondaryButtonText}>{saved ? t('ideas.saved') : t('ideas.saveDiary')}</Text>
               </Pressable>
               {/* Per la musica restiamo sempre sulle sessioni binaurali dell'app, niente musica esterna */}
               {!suggestion.action && (
                 <Pressable onPress={() => setStage('custom')}>
-                  <Text style={styles.linkText}>...oppure chiedi qualcosa di diverso</Text>
+                  <Text style={styles.linkText}>{t('ideas.askDifferent')}</Text>
                 </Pressable>
               )}
             </>
@@ -183,10 +189,10 @@ export default function ResourceSuggestionModal({
 
           {stage === 'custom' && (
             <>
-              <Text style={styles.question}>{CUSTOM_COPY[kind].question}</Text>
+              <Text style={styles.question}>{t(CUSTOM_KEYS[kind].question)}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={CUSTOM_COPY[kind].placeholder}
+                placeholder={t(CUSTOM_KEYS[kind].placeholder)}
                 value={customTopic}
                 onChangeText={setCustomTopic}
                 autoFocus
@@ -201,12 +207,12 @@ export default function ResourceSuggestionModal({
                 ) : (
                   <>
                     <Ionicons name="sparkles" size={18} color="#FFFFFF" />
-                    <Text style={styles.primaryButtonText}>Suggeriscimi qualcosa</Text>
+                    <Text style={styles.primaryButtonText}>{t('ideas.suggestMe')}</Text>
                   </>
                 )}
               </Pressable>
               <Pressable onPress={() => setStage('choice')}>
-                <Text style={styles.linkText}>Torna indietro</Text>
+                <Text style={styles.linkText}>{t('ideas.back')}</Text>
               </Pressable>
             </>
           )}

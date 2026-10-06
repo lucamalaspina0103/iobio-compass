@@ -16,7 +16,9 @@ export interface Idea {
 }
 
 export interface IdeaAction {
-  label: string;
+  label: string; // testo italiano; nelle altre lingue label e' vuoto e si usa labelKey
+  labelKey?: string; // chiave di traduzione del pulsante (es. ideas.openSounds)
+  doneLabelKey?: string; // chiave di traduzione del pulsante "segna come fatto"
   route: string;
   params?: { [key: string]: string };
   doneLabel?: string; // testo del pulsante "segna come fatto" dopo aver aperto l'azione

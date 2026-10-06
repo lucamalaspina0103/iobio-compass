@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useI18n } from '../i18n';
 
 interface DiaryEntryModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export default function DiaryEntryModal({
   onCancel,
   onDelete,
 }: DiaryEntryModalProps) {
+  const { t } = useI18n();
   const [text, setText] = useState(initialText);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function DiaryEntryModal({
         <View style={styles.card}>
           <View style={styles.header}>
             <Ionicons name="book" size={22} color="#557A6D" />
-            <Text style={styles.headerTitle}>{prompt ? 'Scrivi' : 'Il tuo diario'}</Text>
+            <Text style={styles.headerTitle}>{prompt ? t('diaryModal.write') : t('oggi.diaryTitle')}</Text>
             <Pressable onPress={onCancel} hitSlop={8}>
               <Ionicons name="close" size={24} color="#999" />
             </Pressable>
@@ -55,7 +57,7 @@ export default function DiaryEntryModal({
             style={styles.input}
             multiline
             autoFocus
-            placeholder="Scrivi qui..."
+            placeholder={t('diaryModal.placeholder')}
             value={text}
             onChangeText={setText}
             textAlignVertical="top"
@@ -68,7 +70,7 @@ export default function DiaryEntryModal({
               </Pressable>
             )}
             <Pressable style={[styles.saveButton, !text.trim() && styles.saveButtonDisabled]} onPress={handleSave} disabled={!text.trim()}>
-              <Text style={styles.saveButtonText}>Salva</Text>
+              <Text style={styles.saveButtonText}>{t('common.save')}</Text>
             </Pressable>
           </View>
         </View>

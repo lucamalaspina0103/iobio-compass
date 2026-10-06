@@ -7,6 +7,7 @@ import {
   saveNotificationSettings,
 } from '../lib/notificationSettings';
 import { requestPermission, rememberPromptDeclined, syncNotifications } from '../lib/notificationsNative';
+import { useI18n } from '../i18n';
 
 interface NotificationPromptProps {
   visible: boolean;
@@ -16,6 +17,7 @@ interface NotificationPromptProps {
 // Chiede il permesso per le notifiche solo dopo la prima giornata riuscita, spiegando prima
 // cosa riceverai: una sola notifica al giorno, all'ora scelta, solo se non hai fatto la tua parte.
 export default function NotificationPrompt({ visible, onClose }: NotificationPromptProps) {
+  const { t } = useI18n();
   const [time, setTime] = useState('09:00');
   const [busy, setBusy] = useState(false);
 
@@ -45,12 +47,10 @@ export default function NotificationPrompt({ visible, onClose }: NotificationPro
           <View style={styles.iconWrap}>
             <Ionicons name="notifications" size={34} color="#557A6D" />
           </View>
-          <Text style={styles.title}>Un promemoria gentile?</Text>
-          <Text style={styles.text}>
-            Hai fatto il primo passo. Se vuoi, ti ricordo il tuo momento una volta al giorno, all'ora che scegli e solo se non hai ancora fatto la tua parte. Nessuna insistenza: puoi metterlo in pausa o spegnerlo quando vuoi.
-          </Text>
+          <Text style={styles.title}>{t('notifPrompt.title')}</Text>
+          <Text style={styles.text}>{t('notifPrompt.text')}</Text>
 
-          <Text style={styles.label}>A che ora?</Text>
+          <Text style={styles.label}>{t('notifPrompt.atTime')}</Text>
           <View style={styles.timeRow}>
             {REMINDER_TIME_OPTIONS.map(opt => {
               const selected = time === opt.value;
@@ -67,10 +67,10 @@ export default function NotificationPrompt({ visible, onClose }: NotificationPro
           </View>
 
           <Pressable style={[styles.primary, busy && styles.disabled]} onPress={accept} disabled={busy}>
-            <Text style={styles.primaryText}>Sì, ricordamelo</Text>
+            <Text style={styles.primaryText}>{t('notifPrompt.yes')}</Text>
           </Pressable>
           <Pressable onPress={decline} disabled={busy}>
-            <Text style={styles.secondaryText}>Non ora</Text>
+            <Text style={styles.secondaryText}>{t('notifPrompt.notNow')}</Text>
           </Pressable>
         </View>
       </View>

@@ -13,6 +13,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PianoTask, isDaySucceeded, MILESTONES, getAreaInfo } from './pianoPlan';
+import { t } from '../i18n/core';
 
 export interface Streaks {
   current: number;        // giorni riusciti consecutivi fino a oggi (o a ieri, se oggi non e' ancora fatto)
@@ -95,42 +96,31 @@ export interface MilestoneMessage {
   color: string;
 }
 
-export const MILESTONE_MESSAGES: { [milestone: number]: MilestoneMessage } = {
-  7: {
-    title: 'Una settimana di fila',
-    message: "La parte più difficile, l'aggancio, è alle spalle. Da adesso il piano ti chiede un po' di più, perché ormai ci sei dentro.",
-    icon: 'leaf',
-    color: '#557A6D',
-  },
-  14: {
-    title: 'Due settimane di fila',
-    message: 'È il momento in cui la novità svanisce e molti si fermano. Tu sei ancora qui: è la tua vera forza.',
-    icon: 'flame',
-    color: '#FF9800',
-  },
-  21: {
-    title: 'Tre settimane di fila',
-    message: 'Le tue azioni stanno diventando automatiche: ti costano meno fatica di prima.',
-    icon: 'sunny',
-    color: '#FFB300',
-  },
-  30: {
-    title: 'Un mese intero',
-    message: 'Hai completato il piano. Guarda il tuo percorso per vedere quanta strada hai fatto.',
-    icon: 'ribbon',
-    color: '#9C27B0',
-  },
+// Icona e colore di ogni traguardo; titolo e messaggio vengono dai cataloghi (milestone.<n>.title/message)
+const MILESTONE_STYLE: { [milestone: number]: { icon: string; color: string } } = {
+  7: { icon: 'leaf', color: '#557A6D' },
+  14: { icon: 'flame', color: '#FF9800' },
+  21: { icon: 'sunny', color: '#FFB300' },
+  30: { icon: 'ribbon', color: '#9C27B0' },
+};
+
+export const getMilestoneMessage = (milestone: number): MilestoneMessage | null => {
+  const style = MILESTONE_STYLE[milestone];
+  if (!style) return null;
+  return {
+    title: t(`milestone.${milestone}.title`),
+    message: t(`milestone.${milestone}.message`),
+    ...style,
+  };
 };
 
 // Dato personale diverso per ciascun utente, cosi' il traguardo non e' mai una
 // frase generica uguale per tutti.
 export const getMilestoneStatLine = (allTasks: PianoTask[]): string => {
   const { totalCompleted, topArea } = getCompletionStats(allTasks);
-  const parts = [
-    `${totalCompleted} ${totalCompleted === 1 ? 'azione completata' : 'azioni completate'} finora`,
-  ];
+  const parts = [t('milestone.actions', { count: totalCompleted })];
   if (topArea) {
-    parts.push(`l'area su cui hai lavorato di più è ${getAreaInfo(topArea).name}`);
+    parts.push(t('milestone.topArea', { area: getAreaInfo(topArea).name }));
   }
   return parts.join(' · ');
 };

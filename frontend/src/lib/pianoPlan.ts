@@ -48,130 +48,8 @@ export const getAreaInfo = (area: string) => {
     : { name: area, icon: 'ellipse', color: '#557A6D' };
 };
 
-// Pool di 15 micro-azioni per area. Stesso identico testo del backend
-// (backend/server.py) per restare sincronizzati tra modalita' Guest (locale) e
-// modalita' registrata (server).
-export const TASK_TEMPLATES: { [key: string]: string[] } = {
-  energia: [
-    "Fai 5 minuti di stretching al risveglio",
-    "Bevi un bicchiere d'acqua appena sveglio",
-    "Esci all'aria aperta per 10 minuti",
-    "Fai una pausa di 5 minuti ogni 2 ore",
-    "Mangia uno snack energetico a metà mattina",
-    "Evita caffeina dopo le 15:00",
-    "Fai 10 respiri profondi durante la giornata",
-    "Prendi il sole per 15 minuti",
-    "Ascolta musica energizzante per 10 minuti",
-    "Fai una breve passeggiata dopo pranzo",
-    "Fai una doccia rivitalizzante al mattino",
-    "Apri le tende appena sveglio per la luce naturale",
-    "Fai 2 minuti di jumping jack per svegliarti",
-    "Prepara la colazione la sera prima per non correre",
-    "Alzati e stiracchiati ogni ora di lavoro",
-  ],
-  sonno: [
-    "Vai a letto alla stessa ora",
-    "Spegni gli schermi 30 minuti prima di dormire",
-    "Leggi 10 pagine di un libro rilassante",
-    "Prepara la camera per la notte (buio, fresco)",
-    "Fai un bagno caldo serale",
-    "Evita pasti pesanti dopo le 20:00",
-    "Pratica 5 minuti di meditazione serale",
-    "Scrivi 3 cose positive della giornata",
-    "Bevi una tisana rilassante",
-    "Fai stretching leggero prima di dormire",
-    "Metti il telefono in un'altra stanza la sera",
-    "Fai una doccia tiepida prima di coricarti",
-    "Scrivi la lista delle cose da fare domani per liberare la mente",
-    "Riduci le luci in casa un'ora prima di dormire",
-    "Evita alcol nella serata",
-  ],
-  stress: [
-    "Pratica 2 minuti di respirazione profonda",
-    "Scrivi i tuoi pensieri per 5 minuti",
-    "Ascolta musica rilassante per 10 minuti",
-    "Fai una pausa consapevole senza multitasking",
-    "Esci per una camminata di 15 minuti",
-    "Chiama un amico per 10 minuti",
-    "Pratica la gratitudine: annota 3 cose positive",
-    "Fai stretching per rilassare le tensioni",
-    "Disconnettiti dai social per 1 ora",
-    "Dedica 10 minuti a un hobby che ami",
-    "Fai una lista delle priorità del giorno",
-    "Prova la tecnica di respirazione 4-7-8",
-    "Concediti 5 minuti di silenzio senza distrazioni",
-    "Scrivi su carta un pensiero negativo per ridimensionarlo",
-    "Fai una risata guardando qualcosa di divertente",
-  ],
-  movimento: [
-    "Cammina per 10 minuti",
-    "Fai 10 squat durante una pausa",
-    "Prendi le scale invece dell'ascensore",
-    "Fai stretching per 5 minuti",
-    "Balla per 5 minuti su una canzone che ami",
-    "Fai una passeggiata dopo cena",
-    "Pratica yoga per 10 minuti",
-    "Fai 5 minuti di esercizi a corpo libero",
-    "Alzati e muoviti ogni ora",
-    "Prova un nuovo sport per 15 minuti",
-    "Fai 5000 passi oggi",
-    "Parcheggia più lontano e cammina un po' di più",
-    "Fai 10 minuti di camminata veloce",
-    "Fai qualche piegamento durante la giornata",
-    "Fai una sessione di bici o camminata all'aperto",
-  ],
-  alimentazione: [
-    "Mangia una porzione di verdura a pranzo",
-    "Bevi 8 bicchieri d'acqua, distribuiti dalla mattina alla sera",
-    "Fai uno snack con frutta fresca e qualche mandorla o noce, per non far salire troppo la glicemia",
-    "Prepara un pasto sano con ingredienti freschi",
-    "Evita cibi processati oggi",
-    "Mangia consapevolmente senza distrazioni",
-    "Aggiungi alla colazione una fonte proteica sana (uova, yogurt greco, frutta secca o legumi)",
-    "Riduci lo zucchero raffinato",
-    "Prova una nuova ricetta salutare",
-    "Mangia noci o semi come snack",
-    "Fai la spesa con una lista per evitare acquisti impulsivi",
-    "Mastica lentamente ad ogni pasto",
-    "Sostituisci una bevanda zuccherata con acqua o tisana",
-    "Porta con te uno snack sano fuori casa",
-    "Aggiungi una nuova verdura alla tua dieta",
-  ],
-  pelle: [
-    "Applica crema idratante mattina e sera",
-    "Bevi acqua regolarmente durante il giorno",
-    "Usa protezione solare",
-    "Detergi il viso mattina e sera",
-    "Mangia cibi ricchi di antiossidanti",
-    "Evita di toccarti il viso",
-    "Dormi su una federa pulita",
-    "Fai uno scrub delicato",
-    "Applica una maschera idratante",
-    "Limita l'esposizione allo stress",
-    "Bevi un tè verde ricco di antiossidanti",
-    "Cambia la federa del cuscino questa settimana",
-    "Applica il contorno occhi prima di dormire",
-    "Evita docce troppo calde che seccano la pelle",
-    "Prenditi 5 minuti per un automassaggio al viso",
-  ],
-  equilibrio_mentale: [
-    "Medita per 5 minuti al mattino",
-    "Scegli un'attività qualsiasi (mangiare, camminare, lavarti i denti) e falla concentrandoti solo su di essa, senza distrazioni",
-    "Scrivi una sola frase che racchiude come ti senti in questo momento",
-    "Guardati allo specchio e dì 3 affermazioni positive su di te: una sul fisico, una sul carattere, una su un tuo traguardo",
-    "Disconnettiti dai social per 2 ore",
-    "Pratica la gratitudine",
-    "Leggi qualcosa di ispirazionale",
-    "Ascolta un podcast motivazionale",
-    "Passa tempo nella natura",
-    "Pratica il perdono verso te stesso",
-    "Fai 3 respiri consapevoli prima di iniziare la giornata",
-    "Scrivi una cosa che ti rende orgoglioso/a di te",
-    "Concediti una pausa senza sensi di colpa",
-    "Sorridi a te stesso/a allo specchio",
-    "Condividi un pensiero con una persona di fiducia",
-  ],
-};
+export { TASK_TEMPLATES } from './taskTemplates';
+import { TASK_TEMPLATES } from './taskTemplates';
 
 export const DEFAULT_AREAS = ['energia', 'sonno', 'stress'];
 
@@ -185,10 +63,10 @@ export interface Phase {
 
 export const getPhaseForDay = (day: number, totalAreas: number): Phase => {
   const cap = (n: number) => Math.max(1, Math.min(n, totalAreas));
-  if (day <= 7) return { key: 'aggancio', label: 'Settimana 1 · Aggancio', minRequired: cap(1) };
-  if (day <= 14) return { key: 'consolidamento', label: 'Settimana 2 · Consolidamento', minRequired: cap(2) };
-  if (day <= 21) return { key: 'automatismo', label: 'Settimana 3 · Automatismo', minRequired: cap(2) };
-  return { key: 'mantenimento', label: 'Settimana 4 · Mantenimento', minRequired: cap(3) };
+  if (day <= 7) return { key: 'aggancio', label: t('phase.aggancio'), minRequired: cap(1) };
+  if (day <= 14) return { key: 'consolidamento', label: t('phase.consolidamento'), minRequired: cap(2) };
+  if (day <= 21) return { key: 'automatismo', label: t('phase.automatismo'), minRequired: cap(2) };
+  return { key: 'mantenimento', label: t('phase.mantenimento'), minRequired: cap(3) };
 };
 
 export const MILESTONES = [7, 14, 21, 30];
@@ -259,52 +137,10 @@ export const EXPERTS: { [area: string]: Expert } = {
   equilibrio_mentale: { name: 'Jon Kabat-Zinn', role: 'Fondatore della Mindfulness-Based Stress Reduction' },
 };
 
-// 4 consigli per area, uno per ciascun checkpoint settimanale (giorno 7/14/21/28),
-// cosi' non si ripete mai lo stesso consiglio nello stesso piano di 30 giorni.
-export const WEEKLY_TIPS: { [area: string]: string[] } = {
-  energia: [
-    "Esponiti a luce naturale nei primi minuti dopo il risveglio: è il segnale più forte per il ritmo del tuo corpo.",
-    "Evita luce intensa dagli schermi nell'ora prima di dormire, per non compromettere l'energia del giorno dopo.",
-    "Pasti a orari regolari aiutano il corpo a mantenere un'energia più stabile durante il giorno.",
-    "Una breve pausa attiva ogni 90 minuti circa aiuta a mantenere concentrazione ed energia.",
-  ],
-  sonno: [
-    "Andare a letto e svegliarsi sempre alla stessa ora è l'abitudine singola più efficace per dormire meglio.",
-    "Anche un solo caffè nel tardo pomeriggio può ridurre sensibilmente la qualità del sonno profondo.",
-    "Una stanza fresca (intorno ai 18°C) aiuta il corpo ad addormentarsi più facilmente.",
-    "Riduci le luci in casa nell'ultima ora prima di dormire, per favorire la melatonina naturale.",
-  ],
-  stress: [
-    "Vedere lo stress come una sfida da affrontare, e non una minaccia, ne cambia l'effetto sul corpo.",
-    "Se qualcosa ti crea stress, spesso significa che quella cosa conta davvero per te.",
-    "Condividere ciò che ti pesa con qualcuno riduce l'impatto dello stress: non serve affrontarlo da solo.",
-    "Il cuore che batte forte è il corpo che si prepara ad affrontare la sfida, non a scappare.",
-  ],
-  movimento: [
-    "Una camminata a ritmo \"puoi ancora parlare\" alcune volte a settimana conta più di sessioni intense sporadiche.",
-    "La costanza nel muoversi conta più dell'intensità: meglio poco e spesso che tanto e raramente.",
-    "Muoversi regolarmente aiuta il corpo a usare meglio l'energia disponibile durante la giornata.",
-    "Anche solo alzarsi e camminare ogni ora spezza gli effetti dello stare seduti a lungo.",
-  ],
-  alimentazione: [
-    "Varia il più possibile i vegetali che mangi: conta più della singola \"dieta\" che segui.",
-    "Legumi, cereali integrali e semi contano come \"piante\" tanto quanto frutta e verdura.",
-    "I cibi fermentati (yogurt, kefir, crauti) supportano l'equilibrio dei batteri intestinali.",
-    "Preferisci cibi il più possibile vicini al loro stato naturale, riducendo gli ultra-processati.",
-  ],
-  pelle: [
-    "La salute della pelle riflette la salute di tutto il corpo: contano anche alimentazione, sonno e stress, non solo i prodotti che applichi.",
-    "Bere a sufficienza e mangiare cibi ricchi d'acqua aiuta le cellule della pelle a restare idratate anche dall'interno.",
-    "Gli antiossidanti della dieta (frutta e verdura colorata) proteggono la pelle tanto quanto una buona crema.",
-    "Il benessere emotivo si vede sulla pelle: prendersi cura dello stress fa parte della cura della pelle.",
-  ],
-  equilibrio_mentale: [
-    "Non serve aggiungere tempo: basta portare piena attenzione a qualcosa che già fai, come lavarti i denti.",
-    "La mindfulness è notare il momento presente senza giudicarlo, non \"svuotare la mente\".",
-    "Bastano pochi minuti al mattino per cambiare il tono di tutta la giornata.",
-    "Anche solo concentrarsi sul respiro per un minuto è già una forma completa di pratica.",
-  ],
-};
+// 4 consigli per area, uno per ciascun checkpoint settimanale (giorno 7/14/21/28), cosi' non si
+// ripete mai lo stesso consiglio nello stesso piano di 30 giorni. I testi sono nei cataloghi
+// delle traduzioni, con chiavi tip.<area>.<0-3>.
+const TIPS_PER_AREA = 4;
 
 export interface WeeklyTip {
   area: string;
@@ -338,9 +174,9 @@ export const getWeeklySummary = (
 
   const tipIndex = weekNumber - 1; // 0-3
   const tips: WeeklyTip[] = weakAreas.slice(0, 3).map(area => {
-    const pool = WEEKLY_TIPS[area] || WEEKLY_TIPS['equilibrio_mentale'];
-    const expert = EXPERTS[area] || EXPERTS['equilibrio_mentale'];
-    return { area, expert, tip: pool[tipIndex % pool.length] };
+    const tipArea = EXPERTS[area] ? area : 'equilibrio_mentale';
+    const expert = { name: EXPERTS[tipArea].name, role: t('expert.role.' + tipArea) };
+    return { area, expert, tip: t(`tip.${tipArea}.${tipIndex % TIPS_PER_AREA}`) };
   });
 
   return {

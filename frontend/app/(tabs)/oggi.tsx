@@ -38,12 +38,14 @@ import {
   shouldAskPermission,
 } from '../../src/lib/notificationsNative';
 import { getBankedStars } from '../../src/lib/rescreen';
-import { getDailyReflection, CHECKIN_LABELS } from '../../src/lib/checkinReflection';
+import { getDailyReflection } from '../../src/lib/checkinReflection';
+import { useI18n } from '../../src/i18n';
+import { taskText } from '../../src/lib/taskText';
 import {
   computeStreaks,
   computeStars,
   getDayStars,
-  MILESTONE_MESSAGES,
+  getMilestoneMessage,
   MILESTONE_STAR_BONUS,
   getMilestoneStatLine,
   loadCelebrated,
@@ -64,13 +66,14 @@ const todayDateStr = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
 export default function OggiScreen() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
   const [allTasks, setAllTasks] = useState<PianoTask[]>([]);
   const [currentDay, setCurrentDay] = useState(1);
   const [showCheckin, setShowCheckin] = useState(false);
   const [checkinData, setCheckinData] = useState({ energia: 0, umore: 0, sonno: 0 });
   const [loading, setLoading] = useState(false);
-  const [todaysReflection, setTodaysReflection] = useState<{ area: string; question: string } | null>(null);
+  const [todaysReflection, setTodaysReflection] = useState<{ area: string; question: string; questionKey?: string } | null>(null);
   const [showReflection, setShowReflection] = useState(false);
   const [celebrated, setCelebrated] = useState<number[]>([]);
   const [celebratedLoaded, setCelebratedLoaded] = useState(false);
@@ -184,7 +187,7 @@ export default function OggiScreen() {
       }
     } catch (error) {
       setAllTasks(allTasks); // rollback
-      Alert.alert('Errore', 'Impossibile aggiornare il task');
+      Alert.alert(t('common.error'), t('oggi.errUpdate'));
     }
   };
 
@@ -210,7 +213,7 @@ export default function OggiScreen() {
         await addBackendDiaryEntry(user.id, text, area, taskId);
       }
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile salvare nel diario');
+      Alert.alert(t('common.error'), t('oggi.errDiary'));
     }
   };
 
@@ -223,7 +226,7 @@ export default function OggiScreen() {
 
   const submitCheckin = async () => {
     if (checkinData.energia === 0 || checkinData.umore === 0 || checkinData.sonno === 0) {
-      Alert.alert('Attenzione', 'Completa tutte le domande');
+      Alert.alert(t('common.attention'), t('oggi.completeAll'));
       return;
     }
 
@@ -251,12 +254,15 @@ export default function OggiScreen() {
         setCheckinData({ energia: 0, umore: 0, sonno: 0 });
       }
     } catch (error) {
-      Alert.alert('Errore', 'Impossibile salvare il check-in');
+      Alert.alert(t('common.error'), t('oggi.errCheckin'));
     } finally {
       setLoading(false);
     }
   };
 
+  const reflectionText = todaysReflection
+    ? (todaysReflection.questionKey ? t(todaysReflection.questionKey) : todaysReflection.question)
+    : '';
   const todayTasks = allTasks.filter(t => t.day === currentDay);
   const tomorrowTasks = allTasks.filter(t => t.day === currentDay + 1);
   const todayPhase = getPhaseForDay(currentDay, todayTasks.length || 3);
@@ -336,9 +342,9 @@ export default function OggiScreen() {
         <View style={styles.content}>
           <View style={styles.headerRow}>
             <View style={styles.header}>
-              <Text style={styles.greeting}>Ciao! 🌿</Text>
+              <Text style={styles.greeting}>{t('oggi.greeting')}</Text>
               <Text style={styles.date}>
-                {new Date().toLocaleDateString('it-IT', {
+                {new Date().toLocaleDateString(locale, {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long'
@@ -356,7 +362,7 @@ export default function OggiScreen() {
           {screeningResult && (
             <View style={styles.scoreCard}>
               <View style={styles.scoreContent}>
-                <Text style={styles.scoreLabel}>Il tuo Indice IOBIO</Text>
+                <Text style={styles.scoreLabel}>{t('oggi.yourIndex')}</Text>
                 <Text style={styles.scoreValue}>{screeningResult.indice_iobio}</Text>
               </View>
               <Ionicons name="leaf" size={48} color="#557A6D" />
@@ -377,10 +383,10 @@ export default function OggiScreen() {
             <View style={styles.weeklyCard}>
               <View style={styles.weeklyHeader}>
                 <Ionicons name="calendar" size={22} color="#4A4A4A" />
-                <Text style={styles.weeklyTitle}>La tua settimana {weeklySummary.weekNumber}</Text>
+                <Text style={styles.weeklyTitle}>{t('oggi.weekTitle', { n: weeklySummary.weekNumber })}</Text>
               </View>
               <Text style={styles.weeklyRecap}>
-                {weeklySummary.daysSucceededInWeek} giorni riusciti su {weeklySummary.totalDaysInWeek} questa settimana
+                {t('oggi.weekRecap', { done: weeklySummary.daysSucceededInWeek, total: weeklySummary.totalDaysInWeek })}
               </Text>
 
               {weeklySummary.tips.map((wt) => {
@@ -404,7 +410,7 @@ export default function OggiScreen() {
             <View style={styles.inviteRow}>
               <Ionicons name="arrow-down" size={14} color="#557A6D" />
               <Text style={styles.inviteText}>
-                Prima il check-in, poi i task: insieme per il tuo benessere olistico
+                {t('oggi.invite')}
               </Text>
             </View>
           )}
@@ -419,9 +425,9 @@ export default function OggiScreen() {
               color="#557A6D"
             />
             <View style={styles.checkinContent}>
-              <Text style={styles.checkinTitle}>Check-in giornaliero</Text>
+              <Text style={styles.checkinTitle}>{t('oggi.checkinTitle')}</Text>
               <Text style={styles.checkinSubtitle}>
-                {todaysReflection ? 'Fatto per oggi · tocca per rifarlo' : '1 minuto per il tuo benessere'}
+                {todaysReflection ? t('oggi.checkinDone') : t('oggi.checkinPrompt')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#557A6D" />
@@ -431,8 +437,8 @@ export default function OggiScreen() {
             <Pressable style={styles.reflectionCard} onPress={() => setShowReflection(true)}>
               <Ionicons name="help-circle" size={22} color="#557A6D" />
               <View style={styles.taskContent}>
-                <Text style={styles.reflectionLabel}>Un pensiero per oggi</Text>
-                <Text style={styles.reflectionQuestion}>{todaysReflection.question}</Text>
+                <Text style={styles.reflectionLabel}>{t('oggi.thought')}</Text>
+                <Text style={styles.reflectionQuestion}>{reflectionText}</Text>
               </View>
             </Pressable>
           )}
@@ -443,8 +449,8 @@ export default function OggiScreen() {
           >
             <Ionicons name="chatbubble-ellipses" size={32} color="#557A6D" />
             <View style={styles.checkinContent}>
-              <Text style={styles.checkinTitle}>AI Coach</Text>
-              <Text style={styles.checkinSubtitle}>Consigli e approfondimenti per te</Text>
+              <Text style={styles.checkinTitle}>{t('oggi.coachTitle')}</Text>
+              <Text style={styles.checkinSubtitle}>{t('oggi.coachSub')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#557A6D" />
           </Pressable>
@@ -455,14 +461,14 @@ export default function OggiScreen() {
           >
             <Ionicons name="book" size={32} color="#557A6D" />
             <View style={styles.checkinContent}>
-              <Text style={styles.checkinTitle}>Il tuo diario</Text>
-              <Text style={styles.checkinSubtitle}>Scrivi liberamente o rivedi le tue voci</Text>
+              <Text style={styles.checkinTitle}>{t('oggi.diaryTitle')}</Text>
+              <Text style={styles.checkinSubtitle}>{t('oggi.diarySub')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#557A6D" />
           </Pressable>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>I tuoi task di oggi</Text>
+            <Text style={styles.sectionTitle}>{t('oggi.tasksTitle')}</Text>
             {todayTasks.length > 0 ? (
               <>
                 <View style={styles.progressContainer}>
@@ -475,13 +481,13 @@ export default function OggiScreen() {
                 {todaySucceeded ? (
                   <View style={styles.successBanner}>
                     <Ionicons name="checkmark-circle" size={18} color="#557A6D" />
-                    <Text style={styles.successText}>Giornata riuscita, sei a posto!</Text>
+                    <Text style={styles.successText}>{t('oggi.daySuccess')}</Text>
                   </View>
                 ) : (
                   <View style={styles.requiredBanner}>
                     <Ionicons name="alert-circle" size={18} color="#F57C00" />
                     <Text style={styles.requiredText}>
-                      Completa almeno {todayPhase.minRequired} di {todayTasks.length} task per far riuscire la giornata
+                      {t('oggi.dayRequired', { min: todayPhase.minRequired, total: todayTasks.length })}
                     </Text>
                   </View>
                 )}
@@ -504,10 +510,10 @@ export default function OggiScreen() {
                       </View>
                       <View style={styles.taskContent}>
                         <Text style={[styles.taskText, task.completed && styles.taskTextCompleted]}>
-                          {task.task}
+                          {taskText(task.task)}
                         </Text>
                         <Text style={[styles.taskArea, { color: info.color }]}>
-                          {info.name}{task.optional ? ' · extra' : ''}
+                          {info.name}{task.optional ? ' · ' + t('oggi.extra') : ''}
                         </Text>
                       </View>
                       {!task.completed && interaction && (
@@ -522,14 +528,14 @@ export default function OggiScreen() {
                 })}
 
                 <Pressable style={styles.planLink} onPress={() => router.push('/piano')}>
-                  <Text style={styles.planLinkText}>Vedi tutto il piano 30 giorni</Text>
+                  <Text style={styles.planLinkText}>{t('oggi.seePlan')}</Text>
                   <Ionicons name="arrow-forward" size={16} color="#557A6D" />
                 </Pressable>
               </>
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="fitness" size={64} color="#E0E0E0" />
-                <Text style={styles.emptyText}>Completa lo screening per vedere i tuoi task</Text>
+                <Text style={styles.emptyText}>{t('oggi.empty')}</Text>
               </View>
             )}
           </View>
@@ -538,16 +544,16 @@ export default function OggiScreen() {
               volta che la giornata di oggi e' andata a buon fine */}
           {todaySucceeded && tomorrowTasks.length > 0 && (
             <View style={styles.tomorrowSection}>
-              <Text style={styles.tomorrowTitle}>Domani ti aspetta</Text>
+              <Text style={styles.tomorrowTitle}>{t('oggi.tomorrow')}</Text>
               {tomorrowTasks.map(task => {
                 const info = getAreaInfo(task.area);
                 return (
                   <View key={task.id} style={styles.tomorrowItem}>
                     <View style={[styles.tomorrowDot, { backgroundColor: info.color }]} />
                     <View style={styles.taskContent}>
-                      <Text style={styles.tomorrowText}>{task.task}</Text>
+                      <Text style={styles.tomorrowText}>{taskText(task.task)}</Text>
                       <Text style={[styles.taskArea, { color: info.color }]}>
-                        {info.name}{task.optional ? ' · extra' : ''}
+                        {info.name}{task.optional ? ' · ' + t('oggi.extra') : ''}
                       </Text>
                     </View>
                   </View>
@@ -567,16 +573,16 @@ export default function OggiScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Check-in Giornaliero</Text>
+              <Text style={styles.modalTitle}>{t('oggi.checkinTitle')}</Text>
               <Pressable onPress={() => setShowCheckin(false)}>
                 <Ionicons name="close" size={28} color="#4A4A4A" />
               </Pressable>
             </View>
 
             <View style={styles.checkinQuestion}>
-              <Text style={styles.questionText}>Come ti senti oggi?</Text>
+              <Text style={styles.questionText}>{t('oggi.howFeel')}</Text>
 
-              <Text style={styles.questionLabel}>Energia</Text>
+              <Text style={styles.questionLabel}>{t('area.energia')}</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
                   <Pressable
@@ -599,7 +605,7 @@ export default function OggiScreen() {
                 ))}
               </View>
 
-              <Text style={styles.questionLabel}>Umore</Text>
+              <Text style={styles.questionLabel}>{t('oggi.mood')}</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
                   <Pressable
@@ -622,7 +628,7 @@ export default function OggiScreen() {
                 ))}
               </View>
 
-              <Text style={styles.questionLabel}>Qualità del sonno</Text>
+              <Text style={styles.questionLabel}>{t('oggi.sleepQuality')}</Text>
               <View style={styles.scaleContainer}>
                 {[1, 2, 3, 4, 5].map((value) => (
                   <Pressable
@@ -652,7 +658,7 @@ export default function OggiScreen() {
               disabled={loading}
             >
               <Text style={styles.submitButtonText}>
-                {loading ? 'Salvataggio...' : 'Completa Check-in'}
+                {loading ? t('oggi.saving') : t('oggi.completeCheckin')}
               </Text>
             </Pressable>
           </View>
@@ -668,18 +674,18 @@ export default function OggiScreen() {
         <View style={styles.reflectionOverlay}>
           <View style={styles.reflectionModalContent}>
             <Ionicons name="checkmark-circle" size={40} color="#557A6D" />
-            <Text style={styles.reflectionModalTitle}>Check-in completato!</Text>
+            <Text style={styles.reflectionModalTitle}>{t('oggi.checkinDoneTitle')}</Text>
             <Text style={styles.reflectionModalHint}>
-              Non una risposta, solo una domanda per fermarti un attimo:
+              {t('oggi.reflectHint')}
             </Text>
             <Text style={styles.reflectionModalQuestion}>
-              {todaysReflection?.question}
+              {reflectionText}
             </Text>
             <Text style={styles.reflectionModalFooter}>
-              Tra qualche giorno, in base a come va la settimana, arriveranno anche dei consigli mirati.
+              {t('oggi.reflectFooter')}
             </Text>
             <Pressable style={styles.reflectionModalButton} onPress={() => setShowReflection(false)}>
-              <Text style={styles.reflectionModalButtonText}>Continua</Text>
+              <Text style={styles.reflectionModalButtonText}>{t('common.continue')}</Text>
             </Pressable>
           </View>
         </View>
@@ -692,22 +698,22 @@ export default function OggiScreen() {
         onRequestClose={dismissCelebration}
       >
         <View style={styles.reflectionOverlay}>
-          {celebration !== null && MILESTONE_MESSAGES[celebration] && (
+          {celebration !== null && getMilestoneMessage(celebration) && (
             <View style={styles.reflectionModalContent}>
               <Ionicons
-                name={MILESTONE_MESSAGES[celebration].icon as any}
+                name={getMilestoneMessage(celebration)!.icon as any}
                 size={48}
-                color={MILESTONE_MESSAGES[celebration].color}
+                color={getMilestoneMessage(celebration)!.color}
               />
-              <Text style={styles.reflectionModalTitle}>{MILESTONE_MESSAGES[celebration].title}</Text>
+              <Text style={styles.reflectionModalTitle}>{getMilestoneMessage(celebration)!.title}</Text>
               <View style={styles.bonusRow}>
                 <StarRow earned={3} max={3} size={22} />
-                <Text style={styles.bonusText}>+{MILESTONE_STAR_BONUS[celebration]} stelle bonus</Text>
+                <Text style={styles.bonusText}>{t('stars.bonus', { n: MILESTONE_STAR_BONUS[celebration] })}</Text>
               </View>
-              <Text style={styles.celebrationMessage}>{MILESTONE_MESSAGES[celebration].message}</Text>
+              <Text style={styles.celebrationMessage}>{getMilestoneMessage(celebration)!.message}</Text>
               <Text style={styles.reflectionModalFooter}>{getMilestoneStatLine(allTasks)}</Text>
               <Pressable style={styles.reflectionModalButton} onPress={dismissCelebration}>
-                <Text style={styles.reflectionModalButtonText}>Continua</Text>
+                <Text style={styles.reflectionModalButtonText}>{t('common.continue')}</Text>
               </Pressable>
             </View>
           )}
@@ -718,7 +724,7 @@ export default function OggiScreen() {
 
       <DiaryEntryModal
         visible={!!writeTask}
-        prompt={writeTask?.task}
+        prompt={writeTask ? taskText(writeTask.task) : undefined}
         onSave={handleSaveWriteTask}
         onCancel={() => setWriteTask(null)}
       />

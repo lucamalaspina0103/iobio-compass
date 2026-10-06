@@ -6,6 +6,12 @@
 // momento in cui si tocca il task, un modo di soddisfarli subito, dentro l'app.
 
 import { IDEA_CATEGORIES, IDEAS, Idea, IdeaKind } from './ideaLibrary';
+import { getLanguage, t } from '../i18n/core';
+import { IDEAS_EN, CURATED_EN } from './ideas/en';
+import { IDEAS_FR, CURATED_FR } from './ideas/fr';
+import { IDEAS_ES, CURATED_ES } from './ideas/es';
+import { IDEAS_DE, CURATED_DE } from './ideas/de';
+import type { IdeaPools, CuratedPools } from './ideas/shared';
 
 export type TaskInteractionType = 'write' | 'idea' | null;
 
@@ -28,15 +34,22 @@ export const getResourceKind = (taskText: string): IdeaKind => {
   return getIdeaCategory(taskText)?.kind || 'read';
 };
 
+// Le idee e i passaggi nella lingua scelta; l'italiano e' la raccolta originale. Il riconoscimento
+// del tipo di compito (getIdeaCategory) resta sempre sul testo italiano originale.
+const IDEA_POOLS: { [lang: string]: IdeaPools } = { en: IDEAS_EN, fr: IDEAS_FR, es: IDEAS_ES, de: IDEAS_DE };
+const CURATED_POOLS: { [lang: string]: CuratedPools } = { en: CURATED_EN, fr: CURATED_FR, es: CURATED_ES, de: CURATED_DE };
+
 export const getIdeaTitle = (taskText: string): string => {
-  return getIdeaCategory(taskText)?.title || "Un'idea per te";
+  const category = getIdeaCategory(taskText);
+  return category ? t(`ideaTitle.${category.key}`) : t('ideaTitle.default');
 };
 
 // Idea numero `index` per questo task (cicla sulle idee disponibili). L'indice parte dal
 // giorno del piano e sale con "un'altra idea", cosi' non si ripete nello stesso mese.
 export const getIdea = (taskText: string, area: string, index: number): Idea => {
   const category = getIdeaCategory(taskText);
-  const pool = category ? IDEAS[category.key] : null;
+  const lang = getLanguage();
+  const pool = category ? (lang !== 'it' && IDEA_POOLS[lang]?.[category.key]) || IDEAS[category.key] : null;
   if (pool && pool.length > 0) {
     return pool[((index % pool.length) + pool.length) % pool.length];
   }
@@ -87,6 +100,13 @@ export const CURATED_RESOURCES: { [area: string]: CuratedResource[] } = {
 
 // Ciclano per non ripetere sempre lo stesso passaggio nello stesso piano di 30 giorni.
 export const getCuratedResource = (area: string, seed: number): CuratedResource => {
+  const lang = getLanguage();
+  const local = lang !== 'it' ? CURATED_POOLS[lang] : undefined;
+  if (local) {
+    const localPool = local[area] || local['equilibrio_mentale'];
+    const picked = localPool[((seed % localPool.length) + localPool.length) % localPool.length];
+    return { passage: picked.passage, pointer: picked.pointer };
+  }
   const pool = CURATED_RESOURCES[area] || CURATED_RESOURCES['equilibrio_mentale'];
   return pool[((seed % pool.length) + pool.length) % pool.length];
 };

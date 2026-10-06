@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CycleNoticeKind, getNoticeCopy } from '../lib/cycleNotices';
+import { useI18n } from '../i18n';
 
 interface CycleNoticeProps {
   kind: CycleNoticeKind;
@@ -14,6 +15,7 @@ interface CycleNoticeProps {
 // Card non bloccante su Oggi: invita a salvare i progressi (Guest) o a iniziare il ciclo
 // successivo. Toni: "soft" (verde, discreto) e "strong" (arancione, piu' netto).
 export default function CycleNotice({ kind, currentDay, daysSince, onPress, onDismiss }: CycleNoticeProps) {
+  useI18n(); // si ridisegna quando cambia la lingua
   const copy = getNoticeCopy(kind, currentDay, daysSince);
   const strong = copy.tone === 'strong';
   const accent = strong ? '#F57C00' : '#557A6D';

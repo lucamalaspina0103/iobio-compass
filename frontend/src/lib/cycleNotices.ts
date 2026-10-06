@@ -6,6 +6,7 @@
 //    registrato -> invito a rifare lo screening per aprire il ciclo successivo
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '../i18n/core';
 
 export type CycleNoticeKind = 'guest_mid' | 'guest_late' | 'guest_ended' | 'registered_ended' | 'check_due' | 'review_due';
 
@@ -101,58 +102,25 @@ export interface NoticeCopy {
   tone: 'soft' | 'strong';
 }
 
+const NOTICE_STYLE: { [kind in CycleNoticeKind]: { icon: string; tone: 'soft' | 'strong'; hasDismiss: boolean } } = {
+  review_due: { icon: 'compass', tone: 'strong', hasDismiss: false },
+  check_due: { icon: 'pulse', tone: 'soft', hasDismiss: true },
+  guest_mid: { icon: 'shield-checkmark', tone: 'soft', hasDismiss: true },
+  guest_late: { icon: 'hourglass', tone: 'strong', hasDismiss: true },
+  guest_ended: { icon: 'ribbon', tone: 'strong', hasDismiss: false },
+  registered_ended: { icon: 'ribbon', tone: 'strong', hasDismiss: false },
+};
+
+// I testi vengono dai cataloghi (notice.<tipo>.title/text/cta/dismiss) nella lingua scelta
 export const getNoticeCopy = (kind: CycleNoticeKind, currentDay: number, daysSince?: number | null): NoticeCopy => {
-  switch (kind) {
-    case 'review_due':
-      return {
-        title: 'Un altro mese insieme',
-        text: 'È il momento della tua revisione del mese: 5 minuti per vedere cosa è cambiato e scegliere tu dove andare adesso.',
-        cta: 'Fai la revisione',
-        icon: 'compass',
-        tone: 'strong',
-      };
-    case 'check_due':
-      return {
-        title: 'Come stai andando?',
-        text: (daysSince ? `Sono passati ${daysSince} giorni` : "È passato un po' di tempo") + " dall'ultimo controllo. Bastano 2 minuti (7 domande) per vedere i tuoi progressi e aggiornare il piano.",
-        cta: 'Fai il controllo',
-        dismissLabel: 'Più tardi',
-        icon: 'pulse',
-        tone: 'soft',
-      };
-    case 'guest_mid':
-      return {
-        title: 'Stai costruendo qualcosa di tuo',
-        text: `Sei al giorno ${currentDay}: piano, stelle e storico sono salvati solo su questo dispositivo. Con un account gratuito non li perdi mai.`,
-        cta: 'Salva i progressi',
-        dismissLabel: 'Più tardi',
-        icon: 'shield-checkmark',
-        tone: 'soft',
-      };
-    case 'guest_late':
-      return {
-        title: 'Il tuo primo mese sta per finire',
-        text: 'Per iniziare il ciclo successivo e tenere al sicuro le tue stelle serve un account gratuito. Il piano in corso resta tuo fino all\'ultimo giorno.',
-        cta: 'Crea account e salva',
-        dismissLabel: 'Ricordamelo domani',
-        icon: 'hourglass',
-        tone: 'strong',
-      };
-    case 'guest_ended':
-      return {
-        title: 'Hai completato il tuo primo mese!',
-        text: 'Per iniziare il ciclo successivo e tenere al sicuro le stelle guadagnate, crea un account gratuito: porti con te tutto il percorso.',
-        cta: 'Crea account e salva',
-        icon: 'ribbon',
-        tone: 'strong',
-      };
-    case 'registered_ended':
-      return {
-        title: 'Hai completato i 30 giorni!',
-        text: 'Rifai lo screening per iniziare il prossimo ciclo: le tue stelle restano tue e il piano si aggiorna sulle tue nuove aree.',
-        cta: 'Rifai lo screening',
-        icon: 'ribbon',
-        tone: 'strong',
-      };
-  }
+  const style = NOTICE_STYLE[kind];
+  const textKey = kind === 'check_due' && !daysSince ? 'notice.check_due.textNoDays' : `notice.${kind}.text`;
+  return {
+    title: t(`notice.${kind}.title`),
+    text: t(textKey, { day: currentDay, days: daysSince ?? 0 }),
+    cta: t(`notice.${kind}.cta`),
+    dismissLabel: style.hasDismiss ? t(`notice.${kind}.dismiss`) : undefined,
+    icon: style.icon,
+    tone: style.tone,
+  };
 };
