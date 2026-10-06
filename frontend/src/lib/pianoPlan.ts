@@ -7,6 +7,7 @@
 // Modalita' registrata: piano letto/scritto sul backend, condiviso tra dispositivi.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { planDayOn } from './planDay';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -350,10 +351,8 @@ export const getCurrentDay = async (): Promise<number> => {
   try {
     const startDateStr = await AsyncStorage.getItem(PIANO_START_DATE_KEY);
     if (startDateStr) {
-      const startDate = new Date(startDateStr);
-      const today = new Date();
-      const diffTime = today.getTime() - startDate.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      // Il giorno cambia a mezzanotte (vedi planDay.ts), non 24 ore dopo l'ora di inizio
+      const diffDays = planDayOn(new Date(startDateStr), new Date());
       return Math.min(Math.max(diffDays, 1), 30);
     }
     await AsyncStorage.setItem(PIANO_START_DATE_KEY, new Date().toISOString());
@@ -370,8 +369,7 @@ export const getElapsedDays = async (): Promise<number | null> => {
   try {
     const startDateStr = await AsyncStorage.getItem(PIANO_START_DATE_KEY);
     if (!startDateStr) return null;
-    const diffTime = new Date().getTime() - new Date(startDateStr).getTime();
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return planDayOn(new Date(startDateStr), new Date());
   } catch (error) {
     console.error('Error reading elapsed days:', error);
     return null;

@@ -12,6 +12,7 @@
 // Ad ogni apertura dell'app (e a ogni cambio) la sequenza viene ricalcolata da zero.
 
 import { NotificationSettings, isPaused } from './notificationSettings';
+import { planDayOn } from './planDay';
 
 export type MessageFamily = 'moment' | 'comeback' | 'milestone';
 
@@ -132,8 +133,8 @@ const pickVariant = (
 
 // ===== Utilita' di data =====
 
-export const planDayAt = (planStart: Date, when: Date): number =>
-  Math.floor((when.getTime() - planStart.getTime()) / DAY_MS) + 1;
+// Numero del giorno del piano in un certo momento (cambia a mezzanotte, come nell'app)
+export const planDayAt = (planStart: Date, when: Date): number => planDayOn(planStart, when);
 
 const dayKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

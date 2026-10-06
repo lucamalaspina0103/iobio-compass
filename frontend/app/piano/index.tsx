@@ -31,6 +31,7 @@ import { getTaskInteractionType, getResourceKind } from '../../src/lib/taskInter
 import { addLocalDiaryEntry, addBackendDiaryEntry } from '../../src/lib/diary';
 import DiaryEntryModal from '../../src/components/DiaryEntryModal';
 import ResourceSuggestionModal from '../../src/components/ResourceSuggestionModal';
+import { useReloadOnResume } from '../../src/lib/useReloadOnResume';
 
 export default function PianoScreen() {
   const router = useRouter();
@@ -85,6 +86,11 @@ export default function PianoScreen() {
     await loadTasks();
     setRefreshing(false);
   }, [loadTasks]);
+
+  // Quando l'app torna in primo piano o scatta la mezzanotte, ricarica: arrivano i task del nuovo giorno
+  useReloadOnResume(() => {
+    if (isBootstrapped) loadTasks();
+  }, isBootstrapped);
 
   const toggleTaskCompletion = async (taskId: string) => {
     // I giorni futuri si possono vedere ma non spuntare in anticipo

@@ -29,6 +29,7 @@ import {
 import CycleNotice from '../../src/components/CycleNotice';
 import { getDaysSinceLastScreening, getLastScreeningISO, isCheckDue } from '../../src/lib/checkDue';
 import NotificationPrompt from '../../src/components/NotificationPrompt';
+import { useReloadOnResume } from '../../src/lib/useReloadOnResume';
 import {
   notificationsSupported,
   saveSnapshot,
@@ -80,6 +81,11 @@ export default function OggiScreen() {
   const [dismissedNotices, setDismissedNotices] = useState<Awaited<ReturnType<typeof loadDismissed>>>([]);
   const [writeTask, setWriteTask] = useState<PianoTask | null>(null); // task tipo "Scrivi..." in corso
   const [resourceTask, setResourceTask] = useState<PianoTask | null>(null); // task tipo "Leggi/Ascolta..." in corso
+
+  // Quando l'app torna in primo piano o scatta la mezzanotte, ricarica: arrivano i task del nuovo giorno
+  useReloadOnResume(() => {
+    if (isBootstrapped) loadTasks();
+  }, isBootstrapped);
 
   // Ricarica ogni volta che la schermata torna in primo piano (es. dopo aver rifatto lo
   // screening il piano puo' essere cambiato). Aspetta che AppContext finisca di caricare
