@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WelcomeScreen() {
@@ -12,10 +11,15 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="leaf-outline" size={80} color="#7CB342" />
+            <Image
+              source={require('../../assets/images/logo-app.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="IOBIO"
+            />
           </View>
-          
-          <Text style={styles.title}>IOBIO Compass</Text>
+
+          <Text style={styles.title}>Compass</Text>
           <Text style={styles.subtitle}>Benessere Olistico</Text>
           
           <View style={styles.card}>
@@ -58,7 +62,11 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  logo: {
+    width: 200,
+    height: 257,
   },
   title: {
     fontSize: 36,

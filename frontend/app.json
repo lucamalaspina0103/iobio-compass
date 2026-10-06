@@ -16,7 +16,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#7CB342"
+        "monochromeImage": "./assets/images/adaptive-monochrome.png",
+        "backgroundColor": "#557A6D"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.emergent.compasswellness.m66wx0"
@@ -34,11 +35,11 @@
           "image": "./assets/images/splash-image.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#7CB342"
+          "backgroundColor": "#557A6D"
         }
       ],
       "expo-web-browser",
-      ["expo-notifications", { "color": "#7CB342" }]
+      ["expo-notifications", { "icon": "./assets/images/notification-icon.png", "color": "#557A6D" }]
     ],
     "experiments": {
       "typedRoutes": true
