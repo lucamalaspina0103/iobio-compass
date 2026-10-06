@@ -30,6 +30,7 @@ import CycleNotice from '../../src/components/CycleNotice';
 import { getDaysSinceLastScreening, getLastScreeningISO, isCheckDue } from '../../src/lib/checkDue';
 import NotificationPrompt from '../../src/components/NotificationPrompt';
 import { useReloadOnResume } from '../../src/lib/useReloadOnResume';
+import { useIsVeteran } from '../../src/lib/veteran';
 import {
   notificationsSupported,
   saveSnapshot,
@@ -75,6 +76,7 @@ export default function OggiScreen() {
   const [celebratedLoaded, setCelebratedLoaded] = useState(false);
   const [celebration, setCelebration] = useState<number | null>(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const isVeteran = useIsVeteran();
   const [bankedStars, setBankedStars] = useState(0); // stelle dei cicli precedenti (cassaforte)
   const [elapsedDays, setElapsedDays] = useState<number | null>(null);
   const [daysSinceCheck, setDaysSinceCheck] = useState<number | null>(null); // giorni dall'ultimo screening
@@ -292,6 +294,7 @@ export default function OggiScreen() {
           succeededDays,
           stars: stars.total + bankedStars,
           lastScreening: await getLastScreeningISO(isGuest || !user?.id, user?.id),
+          veteran: isVeteran,
           savedAt: new Date().toISOString(),
         });
         await syncNotifications();
@@ -303,18 +306,20 @@ export default function OggiScreen() {
         console.error('Error syncing notifications from Oggi:', error);
       }
     })();
-  }, [allTasks, currentDay, bankedStars, daysSinceCheck]);
+  }, [allTasks, currentDay, bankedStars, daysSinceCheck, isVeteran]);
 
   // Avvisi non bloccanti: Guest (salva i progressi) e fine ciclo
   const isGuestMode = isGuest || !user?.id;
   const notice: CycleNoticeKind | null =
     allTasks.length > 0
-      ? getCycleNotice(isGuestMode, currentDay, elapsedDays, dismissedNotices, isCheckDue(daysSinceCheck, elapsedDays))
+      ? getCycleNotice(isGuestMode, currentDay, elapsedDays, dismissedNotices, isCheckDue(daysSinceCheck, elapsedDays), isVeteran)
       : null;
 
   const handleNoticePress = () => {
     if (notice === 'check_due') {
       router.push({ pathname: '/screening/questionnaire', params: { mode: 'quick' } });
+    } else if (notice === 'review_due') {
+      router.push('/screening/review');
     } else {
       router.push(notice === 'registered_ended' ? '/screening/profile' : '/salva-progressi');
     }

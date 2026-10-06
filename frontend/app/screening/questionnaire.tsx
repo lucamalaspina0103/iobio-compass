@@ -5,22 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  PianoTask,
-  fetchBackendTasks,
-  getElapsedDays,
-  syncStartDateFromServer,
-} from '../../src/lib/pianoPlan';
-import {
-  RescreenPlan,
-  planRescreen,
-  applyLocalRescreen,
-  loadLocalRawTasks,
-} from '../../src/lib/rescreen';
-import { saveCelebrated } from '../../src/lib/rewards';
-import { resetDismissed } from '../../src/lib/cycleNotices';
-
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+import { ALL_QUESTIONS, getCoreQuestions, getScaleLabels } from '../../src/lib/questionBank';
+import { runScreeningSubmit } from '../../src/lib/submitScreening';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
@@ -53,68 +39,6 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// Question structure
-interface Question {
-  id: string;
-  area: string;
-  text: string;
-  scaleType: 'frequency' | 'quality' | 'intensity';
-  polarity: 'positive' | 'negative';
-  weight: number;
-}
-
-// FIXED 21 QUESTIONS (3 per area × 7 areas)
-// Il controllo rapido usa solo la prima domanda di ogni area (id che finisce con _1): sono le
-// domande generali, sulla stessa scala, cosi' l'Indice resta confrontabile nel tempo.
-const ALL_QUESTIONS: Question[] = [
-  // ENERGIA (3)
-  { id: 'energia_1', area: 'energia', text: 'Come valuti il tuo livello di energia durante il giorno?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  { id: 'energia_2', area: 'energia', text: 'Quanto spesso ti senti stanco/a senza un motivo chiaro?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
-  { id: 'energia_3', area: 'energia', text: 'Nel pomeriggio, quanto ti è facile mantenere concentrazione e lucidità?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  
-  // SONNO (3)
-  { id: 'sonno_1', area: 'sonno', text: 'Come valuti la qualità complessiva del tuo sonno nell\'ultima settimana?', scaleType: 'quality', polarity: 'positive', weight: 1.2 },
-  { id: 'sonno_2', area: 'sonno', text: 'Quanto spesso ti svegli durante la notte?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
-  { id: 'sonno_3', area: 'sonno', text: 'Quanto ti senti riposato/a al risveglio?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  
-  // STRESS (3)
-  { id: 'stress_1', area: 'stress', text: 'Negli ultimi 7 giorni, quanto ti sei sentito/a sotto pressione o in tensione?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
-  { id: 'stress_2', area: 'stress', text: 'Quanto spesso ti capita di rimuginare o di non riuscire a "staccare" mentalmente?', scaleType: 'frequency', polarity: 'negative', weight: 1.2 },
-  { id: 'stress_3', area: 'stress', text: 'Quanto ti senti in grado di recuperare calma durante la giornata?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  
-  // MOVIMENTO (3)
-  { id: 'movimento_1', area: 'movimento', text: 'Negli ultimi 7 giorni, quanto ti sei mosso/a (camminate, sport, attività)?', scaleType: 'frequency', polarity: 'positive', weight: 1 },
-  { id: 'movimento_2', area: 'movimento', text: 'Quanto spesso senti rigidità o dolori muscolari/articolari che limitano i movimenti?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
-  { id: 'movimento_3', area: 'movimento', text: 'Come valuti la tua sensazione di corpo "sciolto e reattivo" durante la giornata?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  
-  // ALIMENTAZIONE (3)
-  { id: 'alimentazione_1', area: 'alimentazione', text: 'Come valuti l\'equilibrio della tua alimentazione nell\'ultima settimana?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  { id: 'alimentazione_2', area: 'alimentazione', text: 'Quanto spesso mangi in modo affrettato o distratto, senza ascoltare fame e sazietà?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
-  { id: 'alimentazione_3', area: 'alimentazione', text: 'Quanto ti senti stabile come energia dopo i pasti (senza cali forti)?', scaleType: 'frequency', polarity: 'positive', weight: 1 },
-  
-  // PELLE (3)
-  { id: 'pelle_1', area: 'pelle', text: 'Come valuti lo stato generale della tua pelle in questo periodo?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  { id: 'pelle_2', area: 'pelle', text: 'Quanto spesso noti sensibilità, rossori o imperfezioni che ti danno fastidio?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
-  { id: 'pelle_3', area: 'pelle', text: 'Quanto ti senti soddisfatto/a di idratazione e comfort della pelle (senza "tirare")?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  
-  // EQUILIBRIO MENTALE (3)
-  { id: 'equilibrio_mentale_1', area: 'equilibrio_mentale', text: 'Quanto ti senti emotivamente centrato/a negli ultimi 7 giorni?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-  { id: 'equilibrio_mentale_2', area: 'equilibrio_mentale', text: 'Quanto spesso ti senti sopraffatto/a da pensieri o emozioni difficili da gestire?', scaleType: 'frequency', polarity: 'negative', weight: 1 },
-  { id: 'equilibrio_mentale_3', area: 'equilibrio_mentale', text: 'Quanto valuti la tua capacità di ritagliarti pochi minuti per ricaricarti (pausa, respiro, silenzio)?', scaleType: 'quality', polarity: 'positive', weight: 1 },
-];
-
-// Scale labels with defensive fallback
-const SCALE_LABELS: { [key: string]: string[] } = {
-  frequency: ['Mai', 'Raramente', 'A volte', 'Spesso', 'Sempre'],
-  quality: ['Insufficiente', 'Scarsa', 'Discreta', 'Buona', 'Eccellente'],
-  intensity: ['Per niente', 'Poco', 'Moderata', 'Alta', 'Molto alta'],
-};
-
-// Defensive getter for scale labels
-const getScaleLabels = (scaleType: string): string[] => {
-  return SCALE_LABELS[scaleType] || SCALE_LABELS.frequency;
-};
-
 // Area display info
 const AREA_INFO: { [key: string]: { name: string; icon: string; color: string } } = {
   energia: { name: 'Energia', icon: 'flash', color: '#FF9800' },
@@ -132,7 +56,7 @@ function QuestionnaireScreen() {
   const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
   const isQuick = modeParam === 'quick';
   const QUESTIONS = useMemo(
-    () => (isQuick ? ALL_QUESTIONS.filter(q => q.id.endsWith('_1')) : ALL_QUESTIONS),
+    () => (isQuick ? getCoreQuestions() : ALL_QUESTIONS),
     [isQuick]
   );
   // Progressi salvati separati per tipo, cosi' un controllo rapido non riprende un questionario completo lasciato a meta'
@@ -263,160 +187,17 @@ function QuestionnaireScreen() {
 
   const submitScreening = async (finalAnswers: number[]) => {
     setLoading(true);
-    
-    // PART 1: REQUIRED DEBUG LOGGING
-    console.log('=== SUBMIT SCREENING V2 ===');
-    console.log({
-      currentIndex: currentQuestionIndex,
-      totalQuestions: QUESTIONS.length,
-      lastQuestionId: QUESTIONS[QUESTIONS.length - 1]?.id,
-      lastAnswer: finalAnswers[QUESTIONS.length - 1],
-      answersCount: finalAnswers.filter(a => a > 0).length,
-      allAnswers: finalAnswers,
-    });
-    
-    // Local computation for fallback
-    const debugReport: any = { questions: [], areas: {}, iobioIndex: 0 };
-    const areaScores: { [area: string]: { scores: number[], weights: number[] } } = {};
-    
     try {
-      // Calculate scores locally
-      QUESTIONS.forEach((q, index) => {
-        const value = finalAnswers[index];
-        const polarity = q.polarity || 'positive';
-        const weight = q.weight || 1;
-        
-        let questionScore: number;
-        if (polarity === 'positive') {
-          questionScore = ((value - 1) / 4) * 100;
-        } else {
-          questionScore = ((5 - value) / 4) * 100;
-        }
-        
-        debugReport.questions.push({ id: q.id, value, polarity, questionScore: questionScore.toFixed(1) });
-        
-        if (!areaScores[q.area]) {
-          areaScores[q.area] = { scores: [], weights: [] };
-        }
-        areaScores[q.area].scores.push(questionScore * weight);
-        areaScores[q.area].weights.push(weight);
+      await runScreeningSubmit({
+        questions: QUESTIONS,
+        answers: finalAnswers,
+        kind: isQuick ? 'quick' : 'full',
+        isGuest,
+        userId: user?.id ?? null,
+        setScreeningResult,
       });
-      
-      // Calculate area averages
-      const areaAverages: { [area: string]: number } = {};
-      Object.keys(areaScores).forEach(area => {
-        const totalWeightedScore = areaScores[area].scores.reduce((a, b) => a + b, 0);
-        const totalWeight = areaScores[area].weights.reduce((a, b) => a + b, 0);
-        areaAverages[area] = totalWeightedScore / totalWeight;
-        debugReport.areas[area] = areaAverages[area].toFixed(1);
-      });
-      
-      // Calculate IOBIO index
-      const iobioIndex = Object.values(areaAverages).reduce((a, b) => a + b, 0) / Object.keys(areaAverages).length;
-      debugReport.iobioIndex = iobioIndex.toFixed(1);
-      
-      console.log('Questions:', debugReport.questions);
-      console.log('Area Scores:', debugReport.areas);
-      console.log('IOBIO Index:', debugReport.iobioIndex);
-      
-      // Find 3 weakest areas
-      const sortedAreas = Object.entries(areaAverages).sort((a, b) => a[1] - b[1]);
-      const weakAreas = sortedAreas.slice(0, 3).map(([area]) => area);
-      
-      // Create local results object
-      const localResults = {
-        id: `local_${Date.now()}`,
-        indice_iobio: Math.round(iobioIndex),
-        area_scores: Object.fromEntries(
-          Object.entries(areaAverages).map(([k, v]) => [k, Math.round(v)])
-        ),
-        weak_areas: weakAreas,
-        kind: (isQuick ? 'quick' : 'full') as 'quick' | 'full',
-        date: new Date().toISOString(),
-      };
-      
-      console.log('Local Results:', localResults);
-      
-      // Store locally first (safety)
-      await AsyncStorage.setItem('iobio_latest_results', JSON.stringify(localResults));
-      
-      // Piano "a scorrimento": prima di inviare decidiamo cosa tenere del piano attuale
-      // (il server cancella e rigenera i giorni futuri, quindi serve saperlo prima).
-      const registeredId = !isGuest && user?.id ? user.id : null;
-      let plan: RescreenPlan = { keepUntilDay: 0, closingStars: 0 };
-      let existingTasks: PianoTask[] = [];
-      try {
-        if (registeredId) {
-          await syncStartDateFromServer(registeredId);
-          existingTasks = await fetchBackendTasks(registeredId);
-        } else {
-          existingTasks = await loadLocalRawTasks();
-        }
-        plan = planRescreen(existingTasks, await getElapsedDays());
-      } catch (planError) {
-        console.warn('Impossibile leggere il piano attuale, si riparte da zero:', planError);
-      }
-
-      // Try API submit
-      try {
-        const formattedAnswers = QUESTIONS.map((question, index) => ({
-          question_id: question.id,
-          area: question.area,
-          answer: finalAnswers[index],
-          scale_type: question.scaleType,
-          polarity: question.polarity || 'positive',
-          weight: question.weight || 1,
-        }));
-
-        const response = await fetch(`${API_URL}/api/screening/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: isGuest ? null : user?.id,
-            answers: formattedAnswers,
-            keep_until_day: plan.keepUntilDay,
-            closing_stars: plan.closingStars,
-            kind: isQuick ? 'quick' : 'full',
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('API Response:', data);
-          // Use API data if available
-          setScreeningResult(data);
-          await AsyncStorage.setItem('iobio_latest_results', JSON.stringify(data));
-          if (registeredId) {
-            // Il server ha gia' aggiornato il piano; qui riallineiamo solo la data di inizio.
-            if (plan.keepUntilDay === 0) {
-              await syncStartDateFromServer(registeredId);
-              await saveCelebrated([]);
-              await resetDismissed();
-            }
-          } else {
-            await applyLocalRescreen(data, plan, existingTasks);
-          }
-        } else {
-          console.warn('API returned error, using local results');
-          setScreeningResult(localResults);
-          if (!registeredId) await applyLocalRescreen(localResults, plan, existingTasks);
-        }
-      } catch (apiError) {
-        console.error('API submit failed:', apiError);
-        // Use local results
-        setScreeningResult(localResults);
-        if (!registeredId) await applyLocalRescreen(localResults, plan, existingTasks);
-        try {
-          alert('Errore salvataggio: continuo in locale');
-        } catch (alertError) {
-          console.warn('Alert non mostrabile, continuo comunque:', alertError);
-        }
-      }
-      
-      // CRITICAL: Always navigate, even if API fails
       await AsyncStorage.removeItem(PROGRESS_KEY);
       router.replace('/screening/results');
-      
     } catch (error) {
       console.error('Critical error in submit:', error);
       alert('Errore durante il calcolo. Riprova.');

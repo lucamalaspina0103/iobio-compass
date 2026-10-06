@@ -32,6 +32,7 @@ export interface EngineSnapshot {
   succeededDays: number[]; // giorni del piano "riusciti"
   stars: number;
   lastScreening: string | null; // ISO dell'ultimo screening
+  veteran?: boolean; // account con oltre 90 giorni: revisione del mese al posto del controllo dei 15 giorni
   savedAt: string;
 }
 
@@ -106,6 +107,8 @@ const MILESTONE_COPY = {
   streak: { id: 's', title: 'Quasi un traguardo', body: 'Oggi puoi arrivare a {m} giorni di fila.', route: OGGI },
   check: { id: 'k', title: 'Come stai andando?', body: 'Sono passati {days} giorni: 2 minuti per vedere i tuoi progressi.', route: '/screening/questionnaire?mode=quick' },
   cycle: { id: 'e', title: 'Un mese intero!', body: 'Hai completato i tuoi 30 giorni. Vieni a vedere quanta strada hai fatto.', route: OGGI },
+  // Per chi e' nell'app da oltre 3 mesi: la revisione del mese
+  review: { id: 'e2', title: 'Un altro mese insieme', body: 'È il momento della tua revisione del mese: 5 minuti per scegliere dove andare adesso.', route: '/screening/review' },
 };
 
 const fill = (text: string, vars: { [k: string]: number | string }) =>
@@ -195,7 +198,8 @@ export const planNotifications = ({ now, settings, snapshot, state }: EngineInpu
   const daysSinceCheck = snapshot?.lastScreening
     ? Math.floor((now.getTime() - new Date(snapshot.lastScreening).getTime()) / DAY_MS)
     : null;
-  const checkDue = daysSinceCheck !== null && daysSinceCheck >= CHECK_INTERVAL && planDayNow <= 30;
+  // I veterani non fanno il controllo ogni 15 giorni: per loro c'e' la revisione mensile
+  const checkDue = !snapshot?.veteran && daysSinceCheck !== null && daysSinceCheck >= CHECK_INTERVAL && planDayNow <= 30;
 
   const byDay = new Map<string, PlannedNotification>(); // una sola per giorno
   const usedIds: string[] = [];
@@ -225,7 +229,7 @@ export const planNotifications = ({ now, settings, snapshot, state }: EngineInpu
         milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: `${c.id}${p}`, fireAt, title: fill(c.title, vars), body: fill(c.body, vars), route: c.route };
       } else if (p >= 30) {
         if (!cycleNudgeUsed && !isSpent(state.cycleEndNudge, snapshot!.planStart, now)) {
-          const c = MILESTONE_COPY.cycle;
+          const c = snapshot!.veteran ? MILESTONE_COPY.review : MILESTONE_COPY.cycle;
           milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: c.id, fireAt, title: c.title, body: c.body, route: c.route };
           cycleNudgeUsed = true;
         }
@@ -275,7 +279,7 @@ export const planNotifications = ({ now, settings, snapshot, state }: EngineInpu
   for (const n of notifications) nextState.lastIds[n.family] = n.messageId;
   const checkN = notifications.find(n => n.messageId === MILESTONE_COPY.check.id);
   if (checkN && snapshot?.lastScreening) nextState.checkNudge = { for: snapshot.lastScreening, fireAt: checkN.fireAt.toISOString() };
-  const cycleN = notifications.find(n => n.messageId === MILESTONE_COPY.cycle.id);
+  const cycleN = notifications.find(n => n.messageId === MILESTONE_COPY.cycle.id || n.messageId === MILESTONE_COPY.review.id);
   if (cycleN && snapshot?.planStart) nextState.cycleEndNudge = { for: snapshot.planStart, fireAt: cycleN.fireAt.toISOString() };
 
   return { notifications, state: nextState };

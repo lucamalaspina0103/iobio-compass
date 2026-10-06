@@ -7,7 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type CycleNoticeKind = 'guest_mid' | 'guest_late' | 'guest_ended' | 'registered_ended' | 'check_due';
+export type CycleNoticeKind = 'guest_mid' | 'guest_late' | 'guest_ended' | 'registered_ended' | 'check_due' | 'review_due';
 
 const DISMISSED_KEY = 'cycle_notice_dismissed';
 
@@ -61,10 +61,12 @@ export const getCycleNotice = (
   currentDay: number,
   elapsedDays: number | null,
   dismissed: Dismissed[],
-  checkDue: boolean = false
+  checkDue: boolean = false,
+  veteran: boolean = false
 ): CycleNoticeKind | null => {
   const ended = elapsedDays !== null && elapsedDays > 30;
-  if (ended) return isGuest ? 'guest_ended' : 'registered_ended';
+  // Chi e' nell'app da oltre 3 mesi a fine ciclo fa la revisione del mese, non lo screening completo
+  if (ended) return isGuest ? 'guest_ended' : veteran ? 'review_due' : 'registered_ended';
 
   if (isGuest && currentDay >= GUEST_LATE_DAY) {
     // Si puo' rimandare, ma ricompare il giorno dopo
@@ -72,7 +74,8 @@ export const getCycleNotice = (
     if (!seenToday) return 'guest_late';
   }
 
-  if (checkDue) {
+  // I veterani non fanno il controllo ogni 15 giorni: hanno la revisione mensile
+  if (checkDue && !veteran) {
     // "Piu' tardi" nasconde il controllo per qualche giorno, senza insistere
     const snoozed = dismissed.some(
       d => d.kind === 'check_due' && daysBetween(d.date, todayStr()) < CHECK_SNOOZE_DAYS
@@ -100,6 +103,14 @@ export interface NoticeCopy {
 
 export const getNoticeCopy = (kind: CycleNoticeKind, currentDay: number, daysSince?: number | null): NoticeCopy => {
   switch (kind) {
+    case 'review_due':
+      return {
+        title: 'Un altro mese insieme',
+        text: 'È il momento della tua revisione del mese: 5 minuti per vedere cosa è cambiato e scegliere tu dove andare adesso.',
+        cta: 'Fai la revisione',
+        icon: 'compass',
+        tone: 'strong',
+      };
     case 'check_due':
       return {
         title: 'Come stai andando?',

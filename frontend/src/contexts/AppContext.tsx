@@ -20,7 +20,7 @@ interface ScreeningResult {
   area_scores: { [key: string]: number };
   weak_areas: string[];
   date: string;
-  kind?: 'full' | 'quick';
+  kind?: 'full' | 'quick' | 'review';
 }
 
 interface AppContextType {

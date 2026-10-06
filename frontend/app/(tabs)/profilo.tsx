@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getElapsedDays } from '../../src/lib/pianoPlan';
+import { useIsVeteran } from '../../src/lib/veteran';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -15,6 +16,7 @@ export default function ProfiloScreen() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const isVeteran = useIsVeteran();
   const [showGuestGateModal, setShowGuestGateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -96,7 +98,8 @@ export default function ProfiloScreen() {
         return;
       }
     }
-    router.push({ pathname: '/screening/questionnaire', params: { mode: 'quick' } });
+    if (isVeteran) router.push('/screening/review');
+    else router.push({ pathname: '/screening/questionnaire', params: { mode: 'quick' } });
   };
 
   const confirmRetakeScreening = () => {
@@ -187,7 +190,7 @@ export default function ProfiloScreen() {
               <View style={styles.menuIconContainer}>
                 <Ionicons name="pulse" size={24} color="#7CB342" />
               </View>
-              <Text style={styles.menuText}>Controllo rapido (2 minuti)</Text>
+              <Text style={styles.menuText}>{isVeteran ? 'Revisione del mese (5 minuti)' : 'Controllo rapido (2 minuti)'}</Text>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </Pressable>
 

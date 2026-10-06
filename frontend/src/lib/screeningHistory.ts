@@ -16,7 +16,7 @@ export interface ScreeningHistoryEntry {
   area_scores: { [key: string]: number };
   weak_areas: string[];
   date: string;
-  kind?: 'full' | 'quick';
+  kind?: 'full' | 'quick' | 'review';
 }
 
 // Aggiunge un nuovo screening allo storico locale (chiamato ogni volta che

@@ -89,6 +89,7 @@ export default function ResultsScreen() {
 
   const interpretation = getScoreInterpretation(indice_iobio);
   const isQuick = screeningResult.kind === 'quick';
+  const isReview = screeningResult.kind === 'review';
 
   // Cosa e' cambiato dall'ultima volta: tono sempre incoraggiante, nessun giudizio
   const delta = previous ? indice_iobio - previous.indice_iobio : 0;
@@ -130,6 +131,9 @@ export default function ResultsScreen() {
           {isQuick && (
             <Text style={styles.quickNote}>Controllo rapido · il piano è stato aggiornato da oggi in poi</Text>
           )}
+          {isReview && (
+            <Text style={styles.quickNote}>Revisione del mese · il tuo prossimo mese parte con le aree che hai scelto</Text>
+          )}
 
           {previous && (
             <View style={styles.compareCard}>
@@ -157,8 +161,8 @@ export default function ResultsScreen() {
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>I tuoi Top 3 Focus</Text>
-            <Text style={styles.sectionSubtitle}>Aree dove concentrare l'attenzione</Text>
+            <Text style={styles.sectionTitle}>{isReview ? 'I tuoi focus del mese' : 'I tuoi Top 3 Focus'}</Text>
+            <Text style={styles.sectionSubtitle}>{isReview ? 'Le aree che hai scelto tu' : "Aree dove concentrare l'attenzione"}</Text>
 
             {weak_areas.map((area, index) => (
               <View key={index} style={styles.focusCard}>
