@@ -13,6 +13,7 @@
 
 import { NotificationSettings, isPaused } from './notificationSettings';
 import { planDayOn } from './planDay';
+import { t } from '../i18n/core';
 
 export type MessageFamily = 'moment' | 'comeback' | 'milestone';
 
@@ -68,51 +69,42 @@ const QUIET_TO = 21; // da questa ora in poi mai
 
 interface MessageVariant {
   id: string;
-  title: string;
-  body: string; // puo' usare {stars} {n} {m} {days}
   route?: string;
   needsStars?: boolean;
 }
 
 const OGGI = '/(tabs)/oggi';
 
+// Solo gli id e le regole: titolo e testo sono nei cataloghi (notif.<id>.title / notif.<id>.body)
 export const MOMENT_MESSAGES: MessageVariant[] = [
-  { id: 'm1', title: 'Il tuo momento', body: 'Un gesto piccolo oggi basta. Ne scegli uno?' },
-  { id: 'm2', title: 'Due minuti per te', body: "Scegli l'azione che ti va di più oggi: anche una sola conta." },
-  { id: 'm3', title: "C'è un'idea pronta per te", body: 'Una ricetta, un po\' di respiro o un pensiero da leggere: scegli tu.' },
-  { id: 'm4', title: 'Come stai oggi?', body: "Un check-in di un minuto e poi l'azione del giorno, senza fretta." },
-  { id: 'm5', title: 'Il piano ti aspetta, con calma', body: 'Per far riuscire la giornata ne bastano poche.' },
-  { id: 'm6', title: 'Un momento per respirare', body: '5 minuti con i Suoni o una piccola azione: come preferisci.' },
-  { id: 'm7', title: 'Piccoli passi', body: "Hai già {stars} stelle. Oggi ce n'è un'altra che ti aspetta.", needsStars: true },
-  { id: 'm8', title: 'Fermarsi un minuto', body: 'Il tuo diario è lì, se ti va di scrivere due righe.', route: '/diario' },
+  { id: 'm1' },
+  { id: 'm2' },
+  { id: 'm3' },
+  { id: 'm4' },
+  { id: 'm5' },
+  { id: 'm6' },
+  { id: 'm7', needsStars: true },
+  { id: 'm8', route: '/diario' },
 ];
 
 export const COMEBACK_MESSAGES: { [offset: number]: MessageVariant[] } = {
-  3: [
-    { id: 'c3a', title: 'Le tue stelle ti aspettano', body: 'Sono al sicuro. Quando vuoi, riparti da dove eri: un gesto basta.' },
-    { id: 'c3b', title: 'Nessuna fretta', body: 'Il tuo percorso è fermo ad aspettarti. Non si è perso niente.' },
-    { id: 'c3c', title: 'Un gesto piccolo?', body: 'Anche solo uno è un buon modo per rimetterti in cammino.' },
-  ],
-  7: [
-    { id: 'c7a', title: 'Quando ti va', body: "Il piano è come l'hai lasciato. Scegli l'azione più leggera e riparti." },
-    { id: 'c7b', title: 'Ci siamo, quando vorrai', body: 'Ripartire è più facile di quanto sembri: bastano due minuti.' },
-  ],
-  14: [
-    { id: 'c14a', title: 'Una porta aperta', body: "Qui trovi tutto com'era, per quando vorrai tornare." },
-  ],
+  3: [{ id: 'c3a' }, { id: 'c3b' }, { id: 'c3c' }],
+  7: [{ id: 'c7a' }, { id: 'c7b' }],
+  14: [{ id: 'c14a' }],
 };
 
 const MILESTONE_COPY = {
-  weekly: { id: 'w', title: 'La tua settimana {n}', body: 'La sintesi con i consigli degli esperti è pronta per te.', route: OGGI },
-  streak: { id: 's', title: 'Quasi un traguardo', body: 'Oggi puoi arrivare a {m} giorni di fila.', route: OGGI },
-  check: { id: 'k', title: 'Come stai andando?', body: 'Sono passati {days} giorni: 2 minuti per vedere i tuoi progressi.', route: '/screening/questionnaire?mode=quick' },
-  cycle: { id: 'e', title: 'Un mese intero!', body: 'Hai completato i tuoi 30 giorni. Vieni a vedere quanta strada hai fatto.', route: OGGI },
+  weekly: { id: 'w', route: OGGI },
+  streak: { id: 's', route: OGGI },
+  check: { id: 'k', route: '/screening/questionnaire?mode=quick' },
+  cycle: { id: 'e', route: OGGI },
   // Per chi e' nell'app da oltre 3 mesi: la revisione del mese
-  review: { id: 'e2', title: 'Un altro mese insieme', body: 'È il momento della tua revisione del mese: 5 minuti per scegliere dove andare adesso.', route: '/screening/review' },
+  review: { id: 'e2', route: '/screening/review' },
 };
 
-const fill = (text: string, vars: { [k: string]: number | string }) =>
-  text.replace(/\{(\w+)\}/g, (_, key) => String(vars[key] ?? ''));
+// Testi nella lingua scelta al momento della programmazione (vedi notif.* nei cataloghi)
+const msgTitle = (id: string, vars: { [k: string]: number | string } = {}) => t(`notif.${id}.title`, vars);
+const msgBody = (id: string, vars: { [k: string]: number | string } = {}) => t(`notif.${id}.body`, vars);
 
 const hash = (s: string) => {
   let h = 0;
@@ -226,22 +218,22 @@ export const planNotifications = ({ now, settings, snapshot, state }: EngineInpu
       const vars = { n: p / 7, m: 0, days: daysSinceCheck ?? 0 };
       if (WEEKLY_DAYS.includes(p)) {
         const c = MILESTONE_COPY.weekly;
-        milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: `${c.id}${p}`, fireAt, title: fill(c.title, vars), body: fill(c.body, vars), route: c.route };
+        milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: `${c.id}${p}`, fireAt, title: msgTitle(c.id, vars), body: msgBody(c.id, vars), route: c.route };
       } else if (p >= 30) {
         if (!cycleNudgeUsed && !isSpent(state.cycleEndNudge, snapshot!.planStart, now)) {
           const c = snapshot!.veteran ? MILESTONE_COPY.review : MILESTONE_COPY.cycle;
-          milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: c.id, fireAt, title: c.title, body: c.body, route: c.route };
+          milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: c.id, fireAt, title: msgTitle(c.id), body: msgBody(c.id), route: c.route };
           cycleNudgeUsed = true;
         }
       } else if (checkDue && !checkNudgeUsed && !isSpent(state.checkNudge, snapshot!.lastScreening, now)) {
         const c = MILESTONE_COPY.check;
-        milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: c.id, fireAt, title: c.title, body: fill(c.body, vars), route: c.route };
+        milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: c.id, fireAt, title: msgTitle(c.id), body: msgBody(c.id, vars), route: c.route };
         checkNudgeUsed = true;
       } else if (p >= 1 && p <= 30 && p - 1 <= planDayNow) {
         const mile = streakEndingAt(ok, p - 1) + 1;
         if (MILESTONE_DAYS.includes(mile)) {
           const c = MILESTONE_COPY.streak;
-          milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: `${c.id}${mile}`, fireAt, title: c.title, body: fill(c.body, { m: mile }), route: c.route };
+          milestone = { id: `milestone-${dayKey(fireAt)}`, family: 'milestone', messageId: `${c.id}${mile}`, fireAt, title: msgTitle(c.id), body: msgBody(c.id, { m: mile }), route: c.route };
         }
       }
     }
@@ -253,7 +245,7 @@ export const planNotifications = ({ now, settings, snapshot, state }: EngineInpu
     // Il tuo momento (solo durante il ciclo)
     if (settings.dailyMoment && hasPlan && p <= 30) {
       const v = pickVariant(MOMENT_MESSAGES, `moment-${dayKey(fireAt)}`, [state.lastIds.moment, ...usedIds].filter(Boolean) as string[], stars);
-      add({ id: `moment-${dayKey(fireAt)}`, family: 'moment', messageId: v.id, fireAt, title: v.title, body: fill(v.body, { stars }), route: v.route || OGGI });
+      add({ id: `moment-${dayKey(fireAt)}`, family: 'moment', messageId: v.id, fireAt, title: msgTitle(v.id), body: msgBody(v.id, { stars }), route: v.route || OGGI });
     }
   }
 
@@ -263,7 +255,7 @@ export const planNotifications = ({ now, settings, snapshot, state }: EngineInpu
       const fireAt = atTime(now, offset, h, m);
       const pool = COMEBACK_MESSAGES[offset];
       const v = pickVariant(pool, `comeback-${dayKey(fireAt)}`, [state.lastIds.comeback, ...usedIds].filter(Boolean) as string[], stars);
-      add({ id: `comeback-${dayKey(fireAt)}`, family: 'comeback', messageId: v.id, fireAt, title: v.title, body: fill(v.body, { stars }), route: OGGI });
+      add({ id: `comeback-${dayKey(fireAt)}`, family: 'comeback', messageId: v.id, fireAt, title: msgTitle(v.id), body: msgBody(v.id, { stars }), route: OGGI });
     }
   }
 

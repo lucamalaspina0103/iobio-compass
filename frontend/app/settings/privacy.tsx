@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useI18n } from '../../src/i18n';
 
 const STORAGE_KEY = 'iobio_privacy_settings';
 
@@ -19,6 +20,7 @@ const DEFAULT_SETTINGS: PrivacySettings = {
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const [settings, setSettings] = useState<PrivacySettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function PrivacyScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy</Text>
+        <Text style={styles.headerTitle}>{t('pf.privacy')}</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -57,20 +59,18 @@ export default function PrivacyScreen() {
           <View style={styles.heroIcon}>
             <Ionicons name="shield-checkmark" size={40} color="#557A6D" />
           </View>
-          <Text style={styles.heroText}>
-            La tua privacy è importante. Controlla come vengono utilizzati i tuoi dati.
-          </Text>
+          <Text style={styles.heroText}>{t('ps.hero')}</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Preferenze</Text>
+        <Text style={styles.sectionTitle}>{t('ps.prefs')}</Text>
 
         <View style={styles.card}>
           <View style={styles.iconContainer}>
             <Ionicons name="bar-chart" size={22} color="#557A6D" />
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.cardTitle}>Dati anonimi di utilizzo</Text>
-            <Text style={styles.cardDesc}>Aiutaci a migliorare l'app con statistiche anonime</Text>
+            <Text style={styles.cardTitle}>{t('ps.analytics')}</Text>
+            <Text style={styles.cardDesc}>{t('ps.analyticsDesc')}</Text>
           </View>
           <Switch
             value={settings.analytics}
@@ -85,8 +85,8 @@ export default function PrivacyScreen() {
             <Ionicons name="sparkles" size={22} color="#557A6D" />
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.cardTitle}>Personalizzazione</Text>
-            <Text style={styles.cardDesc}>Consigli su misura in base al tuo screening</Text>
+            <Text style={styles.cardTitle}>{t('ps.personalization')}</Text>
+            <Text style={styles.cardDesc}>{t('ps.personalizationDesc')}</Text>
           </View>
           <Switch
             value={settings.personalization}
@@ -96,28 +96,18 @@ export default function PrivacyScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Come gestiamo i tuoi dati</Text>
+        <Text style={styles.sectionTitle}>{t('ps.how')}</Text>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoParagraph}>
-            • I tuoi dati di screening, check-in e piano sono salvati in modo sicuro e associati solo al tuo account.
-          </Text>
-          <Text style={styles.infoParagraph}>
-            • In modalità Guest i dati restano sul dispositivo e non vengono condivisi.
-          </Text>
-          <Text style={styles.infoParagraph}>
-            • Non vendiamo mai i tuoi dati personali a terze parti.
-          </Text>
-          <Text style={styles.infoParagraph}>
-            • Puoi cancellare tutti i dati in qualsiasi momento dalla schermata Profilo → "Reset app".
-          </Text>
+          <Text style={styles.infoParagraph}>{'• ' + t('ps.b1')}</Text>
+          <Text style={styles.infoParagraph}>{'• ' + t('ps.b2')}</Text>
+          <Text style={styles.infoParagraph}>{'• ' + t('ps.b3')}</Text>
+          <Text style={styles.infoParagraph}>{'• ' + t('ps.b4')}</Text>
         </View>
 
         <View style={styles.noteBox}>
           <Ionicons name="lock-closed" size={20} color="#557A6D" />
-          <Text style={styles.noteText}>
-            IOBIO è uno strumento di benessere e non sostituisce il parere medico professionale.
-          </Text>
+          <Text style={styles.noteText}>{t('ps.note')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -6,6 +6,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadNotificationSettings } from './notificationSettings';
+import { t } from '../i18n/core';
 import {
   EngineSnapshot,
   EngineState,
@@ -116,7 +117,7 @@ export const syncNotifications = async (): Promise<void> => {
 
     if (Platform.OS === 'android') {
       await N.setNotificationChannelAsync(CHANNEL_ID, {
-        name: 'Promemoria gentili',
+        name: t('notif.channel'),
         importance: N.AndroidImportance.DEFAULT,
       });
     }

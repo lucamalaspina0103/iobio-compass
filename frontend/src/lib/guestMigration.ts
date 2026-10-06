@@ -4,6 +4,7 @@
 // richiesta di registrazione, cosi' o va tutto a buon fine o non resta nulla a meta'.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '../i18n/core';
 import { PIANO_START_DATE_KEY, PIANO_TASKS_KEY } from './pianoPlan';
 import { loadLocalScreeningHistory } from './screeningHistory';
 import { loadLocalRawTasks, loadLocalVault } from './rescreen';
@@ -111,14 +112,14 @@ export const registerWithGuestData = async (
       }),
     });
   } catch (error) {
-    throw new Error('Non riesco a collegarmi al server. Controlla la connessione e riprova.');
+    throw new Error(t('pf.errConnect'));
   }
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     const detail = typeof data?.detail === 'string' ? data.detail : null;
     // Errori di validazione (es. email non valida) arrivano come lista: messaggio semplice
-    throw new Error(detail || 'Controlla che l\'email sia scritta correttamente e riprova.');
+    throw new Error(detail || t('mig.errCheckEmail'));
   }
   return data as RegisteredUser;
 };

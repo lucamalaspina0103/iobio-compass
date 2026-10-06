@@ -6,6 +6,7 @@
 // (ogni screening inviato viene gia' salvato li'), letto tramite /api/screening/history.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '../i18n/core';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 export const SCREENING_HISTORY_KEY = 'screening_history';
@@ -48,7 +49,7 @@ export const loadLocalScreeningHistory = async (): Promise<ScreeningHistoryEntry
 
 export const fetchBackendScreeningHistory = async (userId: string): Promise<ScreeningHistoryEntry[]> => {
   const response = await fetch(`${API_URL}/api/screening/history?user_id=${userId}`);
-  if (!response.ok) throw new Error('Impossibile caricare lo storico dal server');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
   return response.json();
 };
 

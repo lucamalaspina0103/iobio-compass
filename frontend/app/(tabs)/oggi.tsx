@@ -66,7 +66,7 @@ const todayDateStr = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
 export default function OggiScreen() {
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, locale, language } = useI18n();
   const { user, isGuest, screeningResult, isBootstrapped } = useAppContext();
   const [allTasks, setAllTasks] = useState<PianoTask[]>([]);
   const [currentDay, setCurrentDay] = useState(1);
@@ -312,7 +312,7 @@ export default function OggiScreen() {
         console.error('Error syncing notifications from Oggi:', error);
       }
     })();
-  }, [allTasks, currentDay, bankedStars, daysSinceCheck, isVeteran]);
+  }, [allTasks, currentDay, bankedStars, daysSinceCheck, isVeteran, language]);
 
   // Avvisi non bloccanti: Guest (salva i progressi) e fine ciclo
   const isGuestMode = isGuest || !user?.id;

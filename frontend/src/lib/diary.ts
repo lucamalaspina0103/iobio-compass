@@ -3,6 +3,7 @@
 // (mai sul server, migrato con "Salva i tuoi progressi"), sul server per i registrati.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { t } from '../i18n/core';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 export const DIARY_KEY = 'diary_entries';
@@ -63,7 +64,7 @@ export const deleteLocalDiaryEntry = async (id: string): Promise<void> => {
 
 export const fetchBackendDiary = async (userId: string): Promise<DiaryEntry[]> => {
   const response = await fetch(`${API_URL}/api/diary/list?user_id=${encodeURIComponent(userId)}`);
-  if (!response.ok) throw new Error('Impossibile caricare il diario dal server');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
   return response.json();
 };
 
@@ -78,7 +79,7 @@ export const addBackendDiaryEntry = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId, text, area, task_id: taskId }),
   });
-  if (!response.ok) throw new Error('Impossibile salvare la voce di diario');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
   return response.json();
 };
 
@@ -88,12 +89,12 @@ export const updateBackendDiaryEntry = async (entryId: string, text: string): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ entry_id: entryId, text }),
   });
-  if (!response.ok) throw new Error('Impossibile aggiornare la voce di diario');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
 };
 
 export const deleteBackendDiaryEntry = async (entryId: string): Promise<void> => {
   const response = await fetch(`${API_URL}/api/diary/${encodeURIComponent(entryId)}`, {
     method: 'DELETE',
   });
-  if (!response.ok) throw new Error('Impossibile eliminare la voce di diario');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
 };

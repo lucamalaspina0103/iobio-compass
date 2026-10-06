@@ -16,18 +16,15 @@ import { useAppContext } from '../src/contexts/AppContext';
 import { registerWithGuestData, cleanupAfterMigration, loadLocalProfile } from '../src/lib/guestMigration';
 import ProfileFields from '../src/components/ProfileFields';
 import PrivacyConsent from '../src/components/PrivacyConsent';
+import { useI18n } from '../src/i18n';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-const BENEFITS = [
-  'Il tuo piano di 30 giorni e le azioni già fatte',
-  'Le tue stelle e la serie di giorni',
-  'Lo storico dei tuoi screening e le voci del diario',
-  'Li ritrovi anche se cambi telefono',
-];
+const BENEFIT_KEYS = ['sp.b1', 'sp.b2', 'sp.b3', 'sp.b4'];
 
 export default function SalvaProgressiScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { setUser, setIsGuest } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,19 +50,19 @@ export default function SalvaProgressiScreen() {
     setError(null);
     const cleanEmail = email.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setError('Inserisci un indirizzo email valido.');
+      setError(t('sp.errEmail'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`La password deve avere almeno ${MIN_PASSWORD_LENGTH} caratteri.`);
+      setError(t('sp.errPwLen', { n: MIN_PASSWORD_LENGTH }));
       return;
     }
     if (!ageRange || !gender) {
-      setError('Scegli una fascia d\'età e un genere (va bene anche "Preferisco non dirlo").');
+      setError(t('auth.errProfile'));
       return;
     }
     if (!accepted) {
-      setError('Devi accettare la privacy policy per continuare.');
+      setError(t('auth.errPrivacy'));
       return;
     }
 
@@ -77,7 +74,7 @@ export default function SalvaProgressiScreen() {
       await setIsGuest(false);
       setDone(true);
     } catch (e: any) {
-      setError(e?.message || 'Qualcosa è andato storto, riprova.');
+      setError(e?.message || t('sp.errGeneric'));
     } finally {
       setLoading(false);
     }
@@ -90,13 +87,10 @@ export default function SalvaProgressiScreen() {
           <View style={styles.doneIcon}>
             <Ionicons name="shield-checkmark" size={56} color="#557A6D" />
           </View>
-          <Text style={styles.title}>I tuoi progressi sono al sicuro</Text>
-          <Text style={styles.subtitle}>
-            Piano, stelle e storico sono ora legati al tuo account. Da adesso puoi anche rifare lo
-            screening e far crescere il tuo percorso nel tempo.
-          </Text>
+          <Text style={styles.title}>{t('sp.doneTitle')}</Text>
+          <Text style={styles.subtitle}>{t('sp.doneText')}</Text>
           <Pressable style={styles.button} onPress={() => router.replace('/(tabs)/oggi')}>
-            <Text style={styles.buttonText}>Torna al tuo percorso</Text>
+            <Text style={styles.buttonText}>{t('sp.back')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -118,25 +112,23 @@ export default function SalvaProgressiScreen() {
             <View style={styles.iconWrap}>
               <Ionicons name="cloud-upload" size={40} color="#557A6D" />
             </View>
-            <Text style={styles.title}>Salva i tuoi progressi</Text>
-            <Text style={styles.subtitle}>
-              Crea un account gratuito: non perdi niente di quello che hai costruito finora.
-            </Text>
+            <Text style={styles.title}>{t('pf.saveTitle')}</Text>
+            <Text style={styles.subtitle}>{t('sp.subtitle')}</Text>
 
             <View style={styles.benefits}>
-              {BENEFITS.map(text => (
-                <View key={text} style={styles.benefitRow}>
+              {BENEFIT_KEYS.map(key => (
+                <View key={key} style={styles.benefitRow}>
                   <Ionicons name="checkmark-circle" size={20} color="#557A6D" />
-                  <Text style={styles.benefitText}>{text}</Text>
+                  <Text style={styles.benefitText}>{t(key)}</Text>
                 </View>
               ))}
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('auth.email')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="tuaemail@esempio.it"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -146,10 +138,10 @@ export default function SalvaProgressiScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('auth.password')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={`Almeno ${MIN_PASSWORD_LENGTH} caratteri`}
+                placeholder={t('sp.pwPlaceholder', { n: MIN_PASSWORD_LENGTH })}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -180,12 +172,12 @@ export default function SalvaProgressiScreen() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? 'Sto salvando...' : 'Crea account e salva'}
+                {loading ? t('sp.saving') : t('notice.guest_late.cta')}
               </Text>
             </Pressable>
 
             <Pressable onPress={() => router.back()}>
-              <Text style={styles.laterText}>Non ora</Text>
+              <Text style={styles.laterText}>{t('notifPrompt.notNow')}</Text>
             </Pressable>
           </View>
         </ScrollView>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Switch, ActivityIndicato
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useI18n } from '../../src/i18n';
 import {
   NotificationSettings,
   DEFAULT_NOTIFICATION_SETTINGS,
@@ -23,6 +24,7 @@ const TRACK = { false: '#E0E0E0', true: '#9DBDB0' };
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [permission, setPermission] = useState<PermissionState>('unsupported');
@@ -50,7 +52,7 @@ export default function NotificationsScreen() {
 
   const paused = isPaused(settings);
   const pausedLabel = settings.pausedUntil
-    ? new Date(settings.pausedUntil).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })
+    ? new Date(settings.pausedUntil).toLocaleDateString(locale, { day: 'numeric', month: 'long' })
     : '';
 
   const pauseForAWeek = () => {
@@ -64,7 +66,7 @@ export default function NotificationsScreen() {
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#4A4A4A" />
         </Pressable>
-        <Text style={styles.headerTitle}>Notifiche</Text>
+        <Text style={styles.headerTitle}>{t('pf.notifications')}</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -74,49 +76,43 @@ export default function NotificationsScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.intro}>
-            Poche notifiche, gentili. Al massimo una al giorno, mai di notte, e mai se la tua parte di oggi è già fatta.
-          </Text>
+          <Text style={styles.intro}>{t('nt.intro')}</Text>
 
           {permission === 'unsupported' && (
             <View style={styles.soonBox}>
               <Ionicons name="time-outline" size={20} color="#557A6D" />
-              <Text style={styles.soonText}>
-                I promemoria arriveranno con l'app per telefono (non sul sito web). Le tue scelte sono già salvate e verranno applicate appena disponibili.
-              </Text>
+              <Text style={styles.soonText}>{t('nt.unsupported')}</Text>
             </View>
           )}
           {permission === 'granted' && (
             <View style={styles.soonBox}>
               <Ionicons name="checkmark-circle" size={20} color="#557A6D" />
-              <Text style={styles.soonText}>Le notifiche sono attive su questo telefono.</Text>
+              <Text style={styles.soonText}>{t('nt.granted')}</Text>
             </View>
           )}
           {permission === 'undetermined' && (
             <View style={styles.soonBox}>
               <Ionicons name="notifications-outline" size={20} color="#557A6D" />
-              <Text style={styles.soonText}>Per ricevere i promemoria serve il tuo permesso.</Text>
+              <Text style={styles.soonText}>{t('nt.undetermined')}</Text>
               <Pressable onPress={askPermission}>
-                <Text style={styles.pauseAction}>Consenti</Text>
+                <Text style={styles.pauseAction}>{t('nt.allow')}</Text>
               </Pressable>
             </View>
           )}
           {permission === 'denied' && (
             <View style={styles.soonBox}>
               <Ionicons name="notifications-off-outline" size={20} color="#F57C00" />
-              <Text style={styles.soonText}>
-                Hai bloccato le notifiche per questa app. Puoi riattivarle dalle impostazioni del telefono.
-              </Text>
+              <Text style={styles.soonText}>{t('nt.denied')}</Text>
               <Pressable onPress={() => Linking.openSettings()}>
-                <Text style={styles.pauseAction}>Apri impostazioni</Text>
+                <Text style={styles.pauseAction}>{t('nt.openSettings')}</Text>
               </Pressable>
             </View>
           )}
 
           <View style={styles.card}>
             <View style={styles.cardTextWrap}>
-              <Text style={styles.cardTitle}>Ricevi notifiche</Text>
-              <Text style={styles.cardDesc}>Interruttore generale</Text>
+              <Text style={styles.cardTitle}>{t('nt.receive')}</Text>
+              <Text style={styles.cardDesc}>{t('nt.master')}</Text>
             </View>
             <Switch
               value={settings.enabled}
@@ -132,8 +128,8 @@ export default function NotificationsScreen() {
                 <Ionicons name="sunny" size={22} color="#557A6D" />
               </View>
               <View style={styles.cardTextWrap}>
-                <Text style={styles.cardTitle}>Il tuo momento</Text>
-                <Text style={styles.cardDesc}>Un promemoria al giorno, solo se non hai ancora fatto la tua parte.</Text>
+                <Text style={styles.cardTitle}>{t('notif.m1.title')}</Text>
+                <Text style={styles.cardDesc}>{t('nt.momentDesc')}</Text>
               </View>
               <Switch
                 value={settings.dailyMoment}
@@ -145,7 +141,7 @@ export default function NotificationsScreen() {
 
             {settings.dailyMoment && (
               <View style={styles.timeCard}>
-                <Text style={styles.timeLabel}>A che ora preferisci?</Text>
+                <Text style={styles.timeLabel}>{t('nt.timeQ')}</Text>
                 <View style={styles.timeRow}>
                   {REMINDER_TIME_OPTIONS.map(opt => {
                     const selected = settings.reminderTime === opt.value;
@@ -168,10 +164,8 @@ export default function NotificationsScreen() {
                 <Ionicons name="hand-left" size={22} color="#557A6D" />
               </View>
               <View style={styles.cardTextWrap}>
-                <Text style={styles.cardTitle}>Ti aspetto, senza fretta</Text>
-                <Text style={styles.cardDesc}>
-                  Se manchi per qualche giorno ti scrivo pochissimo (dopo 3, 7 e 14 giorni). Poi mi fermo finché non torni tu.
-                </Text>
+                <Text style={styles.cardTitle}>{t('nt.comebackTitle')}</Text>
+                <Text style={styles.cardDesc}>{t('nt.comebackDesc')}</Text>
               </View>
               <Switch
                 value={settings.comeback}
@@ -186,10 +180,8 @@ export default function NotificationsScreen() {
                 <Ionicons name="ribbon" size={22} color="#557A6D" />
               </View>
               <View style={styles.cardTextWrap}>
-                <Text style={styles.cardTitle}>Momenti importanti</Text>
-                <Text style={styles.cardDesc}>
-                  Il riepilogo della settimana, i traguardi e la fine del ciclo. Al massimo una volta a settimana.
-                </Text>
+                <Text style={styles.cardTitle}>{t('nt.milestonesTitle')}</Text>
+                <Text style={styles.cardDesc}>{t('nt.milestonesDesc')}</Text>
               </View>
               <Switch
                 value={settings.milestones}
@@ -204,16 +196,16 @@ export default function NotificationsScreen() {
             <View style={styles.pauseCard}>
               {paused ? (
                 <>
-                  <Text style={styles.pauseText}>Notifiche in pausa fino al {pausedLabel}.</Text>
+                  <Text style={styles.pauseText}>{t('nt.pausedUntil', { date: pausedLabel })}</Text>
                   <Pressable onPress={() => update({ pausedUntil: null })}>
-                    <Text style={styles.pauseAction}>Riattiva ora</Text>
+                    <Text style={styles.pauseAction}>{t('nt.resume')}</Text>
                   </Pressable>
                 </>
               ) : (
                 <>
-                  <Text style={styles.pauseText}>Ti serve una pausa?</Text>
+                  <Text style={styles.pauseText}>{t('nt.needBreak')}</Text>
                   <Pressable onPress={pauseForAWeek}>
-                    <Text style={styles.pauseAction}>Silenzia per {PAUSE_DAYS} giorni</Text>
+                    <Text style={styles.pauseAction}>{t('nt.silence', { n: PAUSE_DAYS })}</Text>
                   </Pressable>
                 </>
               )}
@@ -221,11 +213,7 @@ export default function NotificationsScreen() {
           )}
 
           <Text style={styles.footerNote}>
-            {!settings.enabled
-              ? 'Le notifiche sono spente: nessun promemoria, nessun problema. Puoi riaccenderle quando vuoi.'
-              : paused
-              ? 'In pausa: riprenderanno da sole dopo la data indicata, oppure puoi riattivarle subito.'
-              : 'Puoi cambiare queste scelte quando vuoi.'}
+            {!settings.enabled ? t('nt.footerOff') : paused ? t('nt.footerPaused') : t('nt.footer')}
           </Text>
         </ScrollView>
       )}

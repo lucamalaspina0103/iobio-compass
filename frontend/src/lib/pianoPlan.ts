@@ -275,7 +275,7 @@ export const saveLocalTasks = async (tasks: PianoTask[]): Promise<void> => {
 
 export const fetchBackendTasks = async (userId: string): Promise<PianoTask[]> => {
   const response = await fetch(`${API_URL}/api/piano/tasks?user_id=${userId}`);
-  if (!response.ok) throw new Error('Impossibile caricare il piano dal server');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
   return response.json();
 };
 
@@ -328,5 +328,5 @@ export const completeBackendTask = async (taskId: string, completed: boolean): P
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ task_id: taskId, completed }),
   });
-  if (!response.ok) throw new Error('Impossibile aggiornare il task sul server');
+  if (!response.ok) throw new Error(t('sp.errGeneric'));
 };

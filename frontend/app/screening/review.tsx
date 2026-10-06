@@ -28,13 +28,15 @@ import { loadFullHistory } from '../../src/lib/veteran';
 import { ScreeningHistoryEntry } from '../../src/lib/screeningHistory';
 import { parseDate } from '../../src/lib/checkDue';
 import { addBackendDiaryEntry } from '../../src/lib/diary';
+import { useI18n } from '../../src/i18n';
 
 type Stage = 'intro' | 'questions' | 'reflect' | 'focus';
 
+// Le tre domande di riflessione (testi nei cataloghi: rv.reflBetter / rv.reflHard / rv.reflCarry)
 const REFLECTIONS = [
-  { key: 'better', label: 'Cosa è andato meglio in questo periodo?' },
-  { key: 'hard', label: 'Cosa ti è costato più fatica?' },
-  { key: 'carry', label: 'Cosa vuoi portare con te nel prossimo mese?' },
+  { key: 'better', labelKey: 'rv.reflBetter' },
+  { key: 'hard', labelKey: 'rv.reflHard' },
+  { key: 'carry', labelKey: 'rv.reflCarry' },
 ] as const;
 
 // Revisione del mese: per chi e' nell'app da oltre 3 mesi, al posto dello screening completo.
@@ -43,6 +45,7 @@ const REFLECTIONS = [
 // la scelta delle aree del prossimo mese: le sceglie la persona, con le piu' basse suggerite.
 export default function ReviewScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, isGuest, isBootstrapped, setScreeningResult } = useAppContext();
 
   const [loadingContext, setLoadingContext] = useState(true);
@@ -138,7 +141,7 @@ export default function ReviewScreen() {
     if (selected.includes(area)) {
       setSelected(selected.filter(a => a !== area));
     } else if (selected.length >= 3) {
-      setError('Puoi sceglierne al massimo 3: togline una per sceglierne un\'altra.');
+      setError(t('rv.errMax'));
     } else {
       setSelected([...selected, area]);
     }
@@ -161,11 +164,11 @@ export default function ReviewScreen() {
 
       // Le riflessioni, se scritte, diventano una voce del diario
       const parts = REFLECTIONS.filter(r => reflections[r.key].trim()).map(
-        r => `${r.label}\n${reflections[r.key].trim()}`
+        r => `${t(r.labelKey)}\n${reflections[r.key].trim()}`
       );
       if (parts.length > 0) {
         try {
-          await addBackendDiaryEntry(user!.id, `Revisione del mese\n\n${parts.join('\n\n')}`, null, null);
+          await addBackendDiaryEntry(user!.id, `${t('rv.title')}\n\n${parts.join('\n\n')}`, null, null);
         } catch (diaryError) {
           console.error('Error saving review reflections:', diaryError);
         }
@@ -173,7 +176,7 @@ export default function ReviewScreen() {
       router.replace('/screening/results');
     } catch (e) {
       console.error('Error finishing review:', e);
-      setError('Qualcosa è andato storto, riprova tra un attimo.');
+      setError(t('rv.errFinish'));
       setSubmitting(false);
     }
   };
@@ -195,10 +198,10 @@ export default function ReviewScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
           <Ionicons name="compass" size={56} color="#557A6D" />
-          <Text style={styles.title}>La revisione del mese</Text>
-          <Text style={styles.text}>È pensata per chi ha un account e cammina con noi da oltre tre mesi.</Text>
+          <Text style={styles.title}>{t('rv.notRegisteredTitle')}</Text>
+          <Text style={styles.text}>{t('rv.notRegisteredText')}</Text>
           <Pressable style={styles.primary} onPress={() => router.back()}>
-            <Text style={styles.primaryText}>Torna indietro</Text>
+            <Text style={styles.primaryText}>{t('ideas.back')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -211,7 +214,7 @@ export default function ReviewScreen() {
         <Pressable onPress={() => (stage === 'intro' ? router.back() : undefined)} hitSlop={8} disabled={stage !== 'intro'}>
           <Ionicons name="close" size={24} color={stage === 'intro' ? '#4A4A4A' : 'transparent'} />
         </Pressable>
-        <Text style={styles.headerTitle}>Revisione del mese</Text>
+        <Text style={styles.headerTitle}>{t('rv.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
       <View style={styles.progressTrack}>
@@ -228,33 +231,33 @@ export default function ReviewScreen() {
           <View style={styles.iconWrap}>
             <Ionicons name="compass" size={44} color="#557A6D" />
           </View>
-          <Text style={styles.title}>Un altro mese insieme</Text>
+          <Text style={styles.title}>{t('notice.review_due.title')}</Text>
           <Text style={styles.text}>
-            {daysWithUs > 0 ? `Sei con noi da ${daysWithUs} giorni. ` : ''}È il momento di guardare il percorso fatto e di scegliere tu dove andare adesso.
+            {(daysWithUs > 0 ? t('rv.withUs', { days: daysWithUs }) : '') + t('rv.introText')}
           </Text>
 
           {first && last && first.id !== last.id && (
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Il tuo percorso</Text>
+              <Text style={styles.summaryTitle}>{t('rv.yourJourney')}</Text>
               <Text style={styles.summaryLine}>
-                Indice IOBIO: {first.indice_iobio} → {last.indice_iobio}
-                {delta > 0 ? `  (+${delta})` : delta < 0 ? `  (${delta})` : '  (stabile)'}
+                {t('results.index')}: {first.indice_iobio} → {last.indice_iobio}
+                {delta > 0 ? `  (+${delta})` : delta < 0 ? `  (${delta})` : `  (${t('results.stable')})`}
               </Text>
-              <Text style={styles.summaryHint}>Dal primo screening all'ultimo controllo.</Text>
+              <Text style={styles.summaryHint}>{t('rv.sinceFirst')}</Text>
             </View>
           )}
 
           <View style={styles.stepsCard}>
-            <Text style={styles.stepLine}>• {questions.length} domande veloci, circa 3 minuti</Text>
-            <Text style={styles.stepLine}>• Due righe di riflessione, solo se ti va</Text>
-            <Text style={styles.stepLine}>• Scegli tu le aree del prossimo mese</Text>
+            <Text style={styles.stepLine}>{'• ' + t('rv.step1', { n: questions.length })}</Text>
+            <Text style={styles.stepLine}>{'• ' + t('rv.step2')}</Text>
+            <Text style={styles.stepLine}>{'• ' + t('rv.step3')}</Text>
           </View>
 
           <Pressable style={styles.primary} onPress={startQuestions}>
-            <Text style={styles.primaryText}>Iniziamo</Text>
+            <Text style={styles.primaryText}>{t('rv.start')}</Text>
           </Pressable>
           <Pressable onPress={() => router.back()}>
-            <Text style={styles.secondaryText}>Non ora</Text>
+            <Text style={styles.secondaryText}>{t('notifPrompt.notNow')}</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -272,7 +275,7 @@ export default function ReviewScreen() {
           <View style={[styles.areaChip, { backgroundColor: info.color + '20' }]}>
             <Ionicons name={info.icon as any} size={20} color={info.color} />
             <Text style={[styles.areaChipText, { color: info.color }]}>
-              {isDeep ? `Approfondimento · ${info.name}` : info.name}
+              {isDeep ? t('rv.deepDive', { area: info.name }) : info.name}
             </Text>
           </View>
           <Text style={styles.question}>{questionText(currentQuestion)}</Text>
@@ -296,10 +299,10 @@ export default function ReviewScreen() {
 
           <View style={styles.navRow}>
             <Pressable style={styles.backBtn} onPress={backFromQuestion}>
-              <Text style={styles.backText}>Indietro</Text>
+              <Text style={styles.backText}>{t('quest.back')}</Text>
             </Pressable>
             <Pressable style={[styles.nextBtn, !currentValue && styles.disabled]} onPress={nextQuestion} disabled={!currentValue}>
-              <Text style={styles.primaryText}>Avanti</Text>
+              <Text style={styles.primaryText}>{t('quest.next')}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -313,27 +316,27 @@ export default function ReviewScreen() {
         {header}
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Due righe per te</Text>
-            <Text style={styles.text}>Se ti va, scrivi: finiranno nel tuo diario, solo per te. Puoi saltare.</Text>
+            <Text style={styles.title}>{t('rv.reflectTitle')}</Text>
+            <Text style={styles.text}>{t('rv.reflectText')}</Text>
             {REFLECTIONS.map(r => (
               <View key={r.key} style={styles.reflectBlock}>
-                <Text style={styles.reflectLabel}>{r.label}</Text>
+                <Text style={styles.reflectLabel}>{t(r.labelKey)}</Text>
                 <TextInput
                   style={styles.reflectInput}
                   multiline
                   value={reflections[r.key]}
                   onChangeText={text => setReflections({ ...reflections, [r.key]: text })}
-                  placeholder="Scrivi qui..."
+                  placeholder={t('diaryModal.placeholder')}
                   textAlignVertical="top"
                 />
               </View>
             ))}
             <View style={styles.navRow}>
               <Pressable style={styles.backBtn} onPress={() => { setQIndex(questions.length - 1); setStage('questions'); }}>
-                <Text style={styles.backText}>Indietro</Text>
+                <Text style={styles.backText}>{t('quest.back')}</Text>
               </Pressable>
               <Pressable style={styles.nextBtn} onPress={goToFocus}>
-                <Text style={styles.primaryText}>Avanti</Text>
+                <Text style={styles.primaryText}>{t('quest.next')}</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -347,10 +350,8 @@ export default function ReviewScreen() {
     <SafeAreaView style={styles.container}>
       {header}
       <ScrollView contentContainerStyle={styles.body}>
-        <Text style={styles.title}>Dove vuoi andare adesso?</Text>
-        <Text style={styles.text}>
-          Scegli da 1 a 3 aree su cui lavorare nel prossimo mese. Ti suggeriamo quelle dove c'è più margine, ma decidi tu.
-        </Text>
+        <Text style={styles.title}>{t('rv.focusTitle')}</Text>
+        <Text style={styles.text}>{t('rv.focusText')}</Text>
 
         {Object.keys(areaScores)
           .sort((a, b) => areaScores[a] - areaScores[b])
@@ -369,7 +370,7 @@ export default function ReviewScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.areaName}>{info.name}</Text>
                   <Text style={styles.areaMeta}>
-                    {areaScores[area]}/100{suggested.includes(area) ? ' · suggerita' : ''}
+                    {areaScores[area]}/100{suggested.includes(area) ? t('rv.suggested') : ''}
                   </Text>
                 </View>
                 <Ionicons
@@ -391,11 +392,11 @@ export default function ReviewScreen() {
           {submitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.primaryText}>Crea il mio prossimo mese</Text>
+            <Text style={styles.primaryText}>{t('rv.create')}</Text>
           )}
         </Pressable>
         <Pressable onPress={() => setStage('reflect')} disabled={submitting}>
-          <Text style={styles.secondaryText}>Indietro</Text>
+          <Text style={styles.secondaryText}>{t('quest.back')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
