@@ -8,6 +8,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { planDayOn } from './planDay';
+import { t } from '../i18n/core';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -39,8 +40,13 @@ export const AREA_INFO: { [key: string]: { name: string; icon: string; color: st
   equilibrio_mentale: { name: 'Equilibrio Mentale', icon: 'heart', color: '#E91E63' },
 };
 
-export const getAreaInfo = (area: string) =>
-  AREA_INFO[area] || { name: area, icon: 'ellipse', color: '#557A6D' };
+// Il nome dell'area segue la lingua scelta (la schermata che lo usa deve usare useI18n per aggiornarsi)
+export const getAreaInfo = (area: string) => {
+  const info = AREA_INFO[area];
+  return info
+    ? { ...info, name: t('area.' + area) }
+    : { name: area, icon: 'ellipse', color: '#557A6D' };
+};
 
 // Pool di 15 micro-azioni per area. Stesso identico testo del backend
 // (backend/server.py) per restare sincronizzati tra modalita' Guest (locale) e

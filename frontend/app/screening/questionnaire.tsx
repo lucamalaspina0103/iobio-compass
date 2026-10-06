@@ -5,12 +5,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ALL_QUESTIONS, getCoreQuestions, getScaleLabels } from '../../src/lib/questionBank';
+import { ALL_QUESTIONS, getCoreQuestions, getScaleLabels, questionText } from '../../src/lib/questionBank';
+import { getAreaInfo } from '../../src/lib/pianoPlan';
+import { useI18n } from '../../src/i18n';
 import { runScreeningSubmit } from '../../src/lib/submitScreening';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; title: string },
   { hasError: boolean; error: any }
 > {
   constructor(props: any) {
@@ -27,7 +29,7 @@ class ErrorBoundary extends React.Component<
       return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F5DC', padding: 24, justifyContent: 'center' }}>
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#EF5350', marginBottom: 16 }}>
-            Errore Screening
+            {this.props.title}
           </Text>
           <Text style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
             {this.state.error?.toString() || 'Unknown error'}
@@ -39,19 +41,9 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// Area display info
-const AREA_INFO: { [key: string]: { name: string; icon: string; color: string } } = {
-  energia: { name: 'Energia', icon: 'flash', color: '#FF9800' },
-  sonno: { name: 'Sonno', icon: 'moon', color: '#9C27B0' },
-  stress: { name: 'Stress', icon: 'alert-circle', color: '#F44336' },
-  movimento: { name: 'Movimento', icon: 'walk', color: '#2196F3' },
-  alimentazione: { name: 'Alimentazione', icon: 'restaurant', color: '#4CAF50' },
-  pelle: { name: 'Pelle', icon: 'water', color: '#00BCD4' },
-  equilibrio_mentale: { name: 'Equilibrio Mentale', icon: 'heart', color: '#E91E63' },
-};
-
 function QuestionnaireScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, isGuest, setScreeningResult } = useAppContext();
   const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
   const isQuick = modeParam === 'quick';
@@ -77,13 +69,13 @@ function QuestionnaireScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <Text style={{ color: '#EF5350', textAlign: 'center', padding: 24 }}>
-          Question missing. Please restart.
+          {t('quest.errMissing')}
         </Text>
       </SafeAreaView>
     );
   }
 
-  const areaInfo = AREA_INFO[currentQuestion.area] || { name: 'Area', icon: 'help', color: '#999' };
+  const areaInfo = getAreaInfo(currentQuestion.area);
   const scaleLabels = getScaleLabels(currentQuestion.scaleType);
   const polarity = currentQuestion.polarity || 'positive'; // Defensive default
 
@@ -138,11 +130,11 @@ function QuestionnaireScreen() {
 
   const getSmartHint = (value: number, polarity: string): string => {
     if (polarity === 'negative') {
-      if (value >= 4) return '💡 Qui potresti migliorare: inizia con piccole azioni quotidiane';
-      return '✓ Annotato.';
+      if (value >= 4) return t('quest.hintHigh');
+      return t('quest.noted');
     } else {
-      if (value >= 4) return '🌟 Ottimo: continua così!';
-      return '✓ Annotato.';
+      if (value >= 4) return t('quest.hintGreat');
+      return t('quest.noted');
     }
   };
 
@@ -200,7 +192,7 @@ function QuestionnaireScreen() {
       router.replace('/screening/results');
     } catch (error) {
       console.error('Critical error in submit:', error);
-      alert('Errore durante il calcolo. Riprova.');
+      alert(t('quest.errCalc'));
     } finally {
       setLoading(false);
     }
@@ -210,8 +202,8 @@ function QuestionnaireScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.progressInfo}>
-          <Text style={styles.progressText}>{isQuick ? 'Controllo rapido · ' : ''}Domanda {currentQuestionIndex + 1}/{totalQuestions}</Text>
-          <Text style={styles.timeText}>~{timeRemaining} min</Text>
+          <Text style={styles.progressText}>{isQuick ? t('quest.quick') + ' · ' : ''}{t('quest.progress', { n: currentQuestionIndex + 1, total: totalQuestions })}</Text>
+          <Text style={styles.timeText}>{t('quest.minutes', { n: timeRemaining })}</Text>
         </View>
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBar, { width: `${progress}%` }]} />
@@ -225,7 +217,7 @@ function QuestionnaireScreen() {
         </View>
 
         <View style={styles.questionCard}>
-          <Text style={styles.questionText}>{currentQuestion.text}</Text>
+          <Text style={styles.questionText}>{questionText(currentQuestion)}</Text>
         </View>
 
         <View style={styles.answerSection}>
@@ -270,7 +262,7 @@ function QuestionnaireScreen() {
         {currentQuestionIndex > 0 && (
           <Pressable style={styles.backButton} onPress={handleBack}>
             <Ionicons name="arrow-back" size={20} color="#557A6D" />
-            <Text style={styles.backButtonText}>Indietro</Text>
+            <Text style={styles.backButtonText}>{t('quest.back')}</Text>
           </Pressable>
         )}
         <Pressable
@@ -279,9 +271,9 @@ function QuestionnaireScreen() {
           disabled={loading}
         >
           <Text style={styles.nextButtonText}>
-            {loading ? 'Caricamento...' : currentQuestionIndex === totalQuestions - 1 ? 'Completa' : 'Avanti'}
+            {loading ? t('quest.loading') : currentQuestionIndex === totalQuestions - 1 ? t('quest.complete') : t('quest.next')}
           </Text>
-          {currentQuestionIndex < 20 && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
+          {currentQuestionIndex < totalQuestions - 1 && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />}
         </Pressable>
       </View>
 
@@ -291,8 +283,9 @@ function QuestionnaireScreen() {
 
 // Wrap with ErrorBoundary
 export default function WrappedQuestionnaireScreen() {
+  const { t } = useI18n();
   return (
-    <ErrorBoundary>
+    <ErrorBoundary title={t('quest.errTitle')}>
       <QuestionnaireScreen />
     </ErrorBoundary>
   );

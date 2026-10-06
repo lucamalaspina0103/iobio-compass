@@ -5,6 +5,8 @@
 // Tutte sulla stessa scala, cosi' l'Indice IOBIO resta confrontabile nel tempo.
 
 // Question structure
+import { t } from '../i18n/core';
+
 export interface Question {
   id: string;
   area: string;
@@ -54,17 +56,15 @@ export const ALL_QUESTIONS: Question[] = [
   { id: 'equilibrio_mentale_3', area: 'equilibrio_mentale', text: 'Quanto valuti la tua capacità di ritagliarti pochi minuti per ricaricarti (pausa, respiro, silenzio)?', scaleType: 'quality', polarity: 'positive', weight: 1 },
 ];
 
-// Scale labels with defensive fallback
-export const SCALE_LABELS: { [key: string]: string[] } = {
-  frequency: ['Mai', 'Raramente', 'A volte', 'Spesso', 'Sempre'],
-  quality: ['Insufficiente', 'Scarsa', 'Discreta', 'Buona', 'Eccellente'],
-  intensity: ['Per niente', 'Poco', 'Moderata', 'Alta', 'Molto alta'],
+// Etichette della scala di risposta nella lingua scelta (se il tipo non esiste: frequenza)
+const SCALE_TYPES = ['frequency', 'quality', 'intensity'];
+export const getScaleLabels = (scaleType: string): string[] => {
+  const type = SCALE_TYPES.includes(scaleType) ? scaleType : 'frequency';
+  return [1, 2, 3, 4, 5].map(n => t(`scale.${type}.${n}`));
 };
 
-// Defensive getter for scale labels
-export const getScaleLabels = (scaleType: string): string[] => {
-  return SCALE_LABELS[scaleType] || SCALE_LABELS.frequency;
-};
+// Testo di una domanda nella lingua scelta. Il campo `text` resta in italiano (lingua di partenza).
+export const questionText = (q: Question): string => t(`q.${q.id}`);
 
 export const isCoreQuestion = (q: Question) => q.id.endsWith('_1');
 

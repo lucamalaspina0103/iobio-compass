@@ -21,6 +21,7 @@ import {
   getCoreQuestions,
   getDeepDiveQuestions,
   getScaleLabels,
+  questionText,
 } from '../../src/lib/questionBank';
 import { computeLocalResult, runScreeningSubmit } from '../../src/lib/submitScreening';
 import { loadFullHistory } from '../../src/lib/veteran';
@@ -274,7 +275,7 @@ export default function ReviewScreen() {
               {isDeep ? `Approfondimento · ${info.name}` : info.name}
             </Text>
           </View>
-          <Text style={styles.question}>{currentQuestion.text}</Text>
+          <Text style={styles.question}>{questionText(currentQuestion)}</Text>
 
           {labels.map((label, i) => {
             const value = i + 1;
