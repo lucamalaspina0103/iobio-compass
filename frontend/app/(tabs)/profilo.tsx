@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getElapsedDays } from '../../src/lib/pianoPlan';
 import { useIsVeteran } from '../../src/lib/veteran';
 import { LANGUAGES, useI18n } from '../../src/i18n';
+import { serverMessage } from '../../src/lib/serverMessages';
 import LanguagePickerModal from '../../src/components/LanguagePickerModal';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -61,7 +62,7 @@ export default function ProfiloScreen() {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        setDeleteError(typeof data?.detail === 'string' ? data.detail : t('pf.errDelete'));
+        setDeleteError(serverMessage(data?.detail, 'pf.errDelete'));
         return;
       }
       setShowDeleteModal(false);

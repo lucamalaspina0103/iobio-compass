@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import { useI18n } from '../../src/i18n';
+import { serverMessage } from '../../src/lib/serverMessages';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -56,7 +57,7 @@ export default function AICoachScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        Alert.alert(t('common.error'), data.detail || t('coach.errComm'));
+        Alert.alert(t('common.error'), serverMessage(data.detail, 'coach.errComm'));
         setLoading(false);
         return;
       }

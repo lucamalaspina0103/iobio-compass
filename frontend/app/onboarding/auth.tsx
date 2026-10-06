@@ -6,6 +6,7 @@ import { useAppContext } from '../../src/contexts/AppContext';
 import ProfileFields from '../../src/components/ProfileFields';
 import PrivacyConsent from '../../src/components/PrivacyConsent';
 import { useI18n } from '../../src/i18n';
+import { serverMessage } from '../../src/lib/serverMessages';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -60,7 +61,7 @@ export default function AuthScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(typeof data.detail === 'string' ? data.detail : t('auth.errGeneric'));
+        setError(serverMessage(data.detail, 'auth.errGeneric'));
         return;
       }
 

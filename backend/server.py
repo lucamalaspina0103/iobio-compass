@@ -14,6 +14,24 @@ import json
 import random
 import httpx
 from anthropic import AsyncAnthropic
+try:
+    from i18n_texts import (
+        norm_lang,
+        reply_language_rule,
+        SAFETY_KEYWORDS,
+        SAFETY_RESPONSE,
+        CHAT_FALLBACKS,
+        RESOURCE_FALLBACK,
+    )
+except ImportError:  # avvio da fuori dalla cartella backend
+    from backend.i18n_texts import (
+        norm_lang,
+        reply_language_rule,
+        SAFETY_KEYWORDS,
+        SAFETY_RESPONSE,
+        CHAT_FALLBACKS,
+        RESOURCE_FALLBACK,
+    )
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -209,6 +227,7 @@ class ResourceSuggestRequest(BaseModel):
     topic: str
     kind: str  # 'read', 'listen' o 'try'
     task: Optional[str] = None  # il task del piano da cui nasce la richiesta (contesto per l'IA)
+    language: Optional[str] = None  # lingua scelta nell'app (it/en/fr/es/de); assente = italiano
 
 class ResourceSuggestResponse(BaseModel):
     suggestion: str
@@ -221,6 +240,7 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     user_id: Optional[str] = None
     message: str
+    language: Optional[str] = None  # lingua scelta nell'app (it/en/fr/es/de); assente = italiano
 
 class ChatResponse(BaseModel):
     response: str
@@ -924,10 +944,8 @@ async def suggest_resource(data: ResourceSuggestRequest):
     }
     kind_label = kind_labels.get(data.kind, kind_labels["read"])
     task_context = f" Il task del piano e': \"{(data.task or '').strip()[:200]}\"." if data.task else ""
-    fallback = (
-        "Non riesco a darti un suggerimento su misura in questo momento. "
-        "Prova a fare 2 minuti di respirazione lenta mentre ci ripensi: a volte basta quello per ripartire."
-    )
+    lang = norm_lang(data.language)
+    fallback = RESOURCE_FALLBACK[lang]
 
     if anthropic_client is None:
         return ResourceSuggestResponse(suggestion=fallback)
@@ -940,9 +958,10 @@ async def suggest_resource(data: ResourceSuggestRequest):
             "se e' una lettura, scrivi tu stesso un breve pensiero/riflessione ispirante e pronta da leggere ora; "
             "se e' un ascolto, indica UN SOLO podcast, brano o fonte audio REALE, conosciuta e verificabile (solo il nome, mai un episodio specifico che potresti inventare), in una frase; "
             "se e' qualcosa da provare, descrivi UNA sola idea semplice e fattibile in pochi minuti. "
-            "REGOLE FERREE: rispondi in italiano, massimo 3 frasi brevi, testo semplice senza markdown "
+            f"REGOLE FERREE: {reply_language_rule(lang)} Massimo 3 frasi brevi, testo semplice senza markdown "
             "(niente #, niente **, niente elenchi puntati, niente titoli, niente -- separatori), "
-            "nessuna diagnosi medica, nessuna premessa o introduzione, nessuna alternativa proposta oltre a quella richiesta, vai dritto al contenuto."
+            "nessuna diagnosi medica, nessuna premessa o introduzione, nessuna alternativa proposta oltre a quella richiesta, vai dritto al contenuto. "
+            "Se indichi una fonte, scegline una conosciuta da chi parla la lingua della risposta."
         )
         completion = await anthropic_client.messages.create(
             model=ANTHROPIC_MODEL,
@@ -967,8 +986,11 @@ async def chat_with_ai(data: ChatRequest):
                 sort=[("date", -1)]
             )
 
+        lang = norm_lang(data.language)
+
         # Build context
         context = "Sei un coach di benessere olistico. Fornisci consigli semplici e pratici per migliorare il benessere. "
+        context += reply_language_rule(lang) + " "
         context += "Non fornire mai diagnosi mediche. "
         context += "Se l'utente menziona sintomi gravi come depressione severa, pensieri autolesionistici, attacchi di panico, o altri sintomi seri, "
         context += "rispondi con empatia e raccomanda di consultare un professionista della salute mentale. "
@@ -977,17 +999,9 @@ async def chat_with_ai(data: ChatRequest):
             context += f"\nContesto utente: Indice IOBIO {screening['indice_iobio']}/100. "
             context += f"Aree più deboli: {', '.join(screening['weak_areas'])}. "
 
-        # Check for safety keywords in user message
-        safety_keywords = ['suicid', 'uccid', 'morte', 'morire', 'autolesion', 'depress grave', 'panico', 'ansia grave']
-        if any(keyword in data.message.lower() for keyword in safety_keywords):
-            safety_response = (
-                "Mi dispiace che tu stia attraversando un momento difficile. "
-                "È molto importante che tu parli con un professionista della salute mentale che possa offrirti il supporto adeguato. "
-                "Ti consiglio di contattare il tuo medico o un servizio di supporto psicologico. "
-                "In caso di emergenza, puoi chiamare il 112 o rivolgerti al pronto soccorso più vicino. "
-                "La tua salute e il tuo benessere sono la priorità. 💚"
-            )
-            return ChatResponse(response=safety_response)
+        # Check for safety keywords in user message (in tutte le lingue supportate)
+        if any(keyword in data.message.lower() for keyword in SAFETY_KEYWORDS):
+            return ChatResponse(response=SAFETY_RESPONSE[lang])
 
         try:
             # Chiamata diretta a Claude (nessun proxy Emergent)
@@ -1018,14 +1032,8 @@ async def chat_with_ai(data: ChatRequest):
             # If LLM fails (budget exceeded, etc.), provide fallback response
             logging.error(f"LLM error: {str(llm_error)}")
 
-            fallback_responses = [
-                "Grazie per la tua domanda! Per migliorare il tuo benessere, ricorda di: fare movimento regolare, dormire bene, bere molta acqua e praticare la mindfulness. 🌿",
-                "Il benessere è un viaggio! Inizia con piccoli passi: una camminata di 10 minuti, qualche respiro profondo, o semplicemente prenderti un momento per te. 💚",
-                "Ricorda i pilastri del benessere: alimentazione sana, movimento, riposo adeguato, gestione dello stress e connessioni sociali positive. Su quale vuoi lavorare oggi? 🌱"
-            ]
-
             import random
-            fallback = random.choice(fallback_responses)
+            fallback = random.choice(CHAT_FALLBACKS[lang])
 
             return ChatResponse(response=fallback)
 

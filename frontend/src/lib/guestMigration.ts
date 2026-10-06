@@ -5,6 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { t } from '../i18n/core';
+import { serverMessage } from './serverMessages';
 import { PIANO_START_DATE_KEY, PIANO_TASKS_KEY } from './pianoPlan';
 import { loadLocalScreeningHistory } from './screeningHistory';
 import { loadLocalRawTasks, loadLocalVault } from './rescreen';
@@ -119,7 +120,7 @@ export const registerWithGuestData = async (
   if (!response.ok) {
     const detail = typeof data?.detail === 'string' ? data.detail : null;
     // Errori di validazione (es. email non valida) arrivano come lista: messaggio semplice
-    throw new Error(detail || t('mig.errCheckEmail'));
+    throw new Error(serverMessage(detail, 'mig.errCheckEmail'));
   }
   return data as RegisteredUser;
 };
