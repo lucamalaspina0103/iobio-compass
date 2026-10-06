@@ -10,6 +10,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timedelta, timezone
 import bcrypt
+import json
 import random
 import httpx
 from anthropic import AsyncAnthropic
@@ -39,6 +40,23 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # ===== MODELS =====
+
+# Le 7 aree dello screening
+ALLOWED_AREAS = ['energia', 'sonno', 'stress', 'movimento', 'alimentazione', 'pelle', 'equilibrio_mentale']
+ALLOWED_SCREENING_KINDS = ('full', 'quick', 'review')
+VETERAN_DAYS = 90  # da questo numero di giorni dal primo screening si passa ai task di livello 2
+
+def _load_level2_templates() -> Dict[str, List[str]]:
+    """Task di livello 2 (dopo i primi 3 mesi): file JSON accanto a server.py."""
+    try:
+        with open(ROOT_DIR / "task_templates_level2.json", encoding="utf-8") as f:
+            data = json.load(f)
+        return {k: v for k, v in data.items() if isinstance(v, list) and len(v) > 0}
+    except Exception as e:
+        print(f"LEVEL2_TEMPLATES_NOT_LOADED: {e}")
+        return {}
+
+TASK_TEMPLATES_LEVEL2 = _load_level2_templates()
 
 # Stesse opzioni del frontend (screening/profile.tsx, onboarding/auth.tsx, salva-progressi.tsx)
 ALLOWED_AGE_RANGES = {'18-24', '25-34', '35-44', '45-54', '55+', 'preferisco-non-dirlo'}
@@ -118,8 +136,11 @@ class ScreeningSubmit(BaseModel):
     # Stelle del ciclo che si chiude, da mettere in cassaforte (solo con keep_until_day=0)
     closing_stars: int = 0
     # 'full' = screening completo (21 domande), 'quick' = controllo rapido (7 domande generali,
-    # una per area, stessa scala: l'Indice resta confrontabile nel tempo)
+    # una per area, stessa scala: l'Indice resta confrontabile nel tempo), 'review' = revisione
+    # del mese per chi e' nell'app da almeno 90 giorni
     kind: str = 'full'
+    # Revisione del mese: le aree scelte dalla persona (da 1 a 3) al posto delle 3 piu' basse
+    focus_areas: Optional[List[str]] = None
 
 class PianoStart(BaseModel):
     user_id: str
@@ -282,12 +303,15 @@ def get_phase_for_day(day: int, total_areas: int) -> dict:
     return {"key": "mantenimento", "label": "Settimana 4 · Mantenimento", "min_required": cap(3)}
 
 
-async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = None) -> List[PianoTask]:
+async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = None, level: int = 1) -> List[PianoTask]:
     """Generate 30 days of micro-habits based on weak areas with robust fallback.
 
     Each day offers one task option per weak area (normally 3): the user chooses which
     to complete. The number of options required to "succeed" the day ramps up over the
-    month (see get_phase_for_day), instead of forcing all of them from day 1."""
+    month (see get_phase_for_day), instead of forcing all of them from day 1.
+
+    level=2 (chi e' nell'app da almeno 90 giorni) usa i task del file
+    task_templates_level2.json: dopo tre mesi quelli iniziali si sono gia' visti molte volte."""
 
     # GUARDRAIL A: Ensure weak_areas is never empty
     if not weak_areas or len(weak_areas) == 0:
@@ -416,6 +440,11 @@ async def generate_piano_tasks(weak_areas: List[str], user_id: Optional[str] = N
         ]
     }
 
+    if level >= 2 and TASK_TEMPLATES_LEVEL2:
+        for level2_area, level2_pool in TASK_TEMPLATES_LEVEL2.items():
+            if level2_area in task_templates:
+                task_templates[level2_area] = level2_pool
+
     generic_fallback = [
         "Fai 5 minuti di respirazione lenta (4-6) oggi.",
         "Fai una camminata di 10 minuti a passo comodo.",
@@ -526,7 +555,7 @@ async def migrate_guest_data(user_id: str, guest: GuestData):
             indice_iobio=s.indice_iobio,
             area_scores=s.area_scores,
             weak_areas=s.weak_areas,
-            kind=s.kind if s.kind in ('full', 'quick') else 'full',
+            kind=s.kind if s.kind in ALLOWED_SCREENING_KINDS else 'full',
             date=parse_client_date(s.date) or datetime.utcnow(),
         ).dict()
         for s in guest.screenings
@@ -655,6 +684,18 @@ async def submit_screening(data: ScreeningSubmit):
     # Calculate scores
     indice_iobio, area_scores, weak_areas = calculate_indice_iobio(data.answers)
 
+    kind = data.kind if data.kind in ALLOWED_SCREENING_KINDS else 'full'
+
+    # Nella revisione del mese la persona sceglie da 1 a 3 aree su cui lavorare: valgono
+    # al posto delle 3 piu' basse (solo aree conosciute, senza doppioni)
+    if kind == 'review' and data.focus_areas:
+        chosen: List[str] = []
+        for area in data.focus_areas:
+            if area in ALLOWED_AREAS and area not in chosen:
+                chosen.append(area)
+        if 1 <= len(chosen) <= 3:
+            weak_areas = chosen
+
     # Create screening result
     result = ScreeningResult(
         user_id=data.user_id,
@@ -662,7 +703,7 @@ async def submit_screening(data: ScreeningSubmit):
         indice_iobio=indice_iobio,
         area_scores=area_scores,
         weak_areas=weak_areas,
-        kind=data.kind if data.kind in ('full', 'quick') else 'full',
+        kind=kind,
     )
 
     # Save to database
@@ -679,7 +720,14 @@ async def submit_screening(data: ScreeningSubmit):
         if already_lived == 0:
             keep = 0
 
-    tasks = await generate_piano_tasks(weak_areas, data.user_id)
+    # Chi e' nell'app da almeno 90 giorni (dal primo screening) riceve i task di livello 2
+    level = 1
+    if data.user_id:
+        first = await db.screenings.find_one({"user_id": data.user_id}, sort=[("date", 1)])
+        if first and first.get("date") and (datetime.utcnow() - first["date"]).days >= VETERAN_DAYS:
+            level = 2
+
+    tasks = await generate_piano_tasks(weak_areas, data.user_id, level=level)
 
     if keep > 0:
         delete_result = await db.piano_tasks.delete_many({**query, "day": {"$gt": keep}})
@@ -699,7 +747,7 @@ async def submit_screening(data: ScreeningSubmit):
 
     if tasks:  # insert_many con lista vuota darebbe errore (es. scorrimento oltre l'ultimo giorno)
         await db.piano_tasks.insert_many([task.dict() for task in tasks])
-    print(f"PIANO_TASKS_CREATED: {len(tasks)} new tasks for user_id={data.user_id}")
+    print(f"PIANO_TASKS_CREATED: {len(tasks)} new tasks (level {level}) for user_id={data.user_id}")
 
     return result
 
