@@ -5,11 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../src/contexts/AppContext';
 import ProfileFields from '../../src/components/ProfileFields';
 import PrivacyConsent from '../../src/components/PrivacyConsent';
+import { useI18n } from '../../src/i18n';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { setUser, setIsGuest, setUserProfile, setScreeningResult, setHasCompletedOnboarding } = useAppContext();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -24,18 +26,18 @@ export default function AuthScreen() {
     // Messaggio a schermo e non Alert.alert: su web Alert.alert non mostra nulla
     setError(null);
     if (!email || !password) {
-      setError('Inserisci email e password');
+      setError(t('auth.errFields'));
       return;
     }
     // Chi crea un account sceglie sempre eta'/genere (anche "preferisco non dirlo" va bene)
     // e accetta la privacy PRIMA che l'account venga creato, non dopo.
     if (!isLogin) {
       if (!ageRange || !gender) {
-        setError('Scegli una fascia d\'età e un genere (va bene anche "Preferisco non dirlo").');
+        setError(t('auth.errProfile'));
         return;
       }
       if (!accepted) {
-        setError('Devi accettare la privacy policy per continuare');
+        setError(t('auth.errPrivacy'));
         return;
       }
     }
@@ -58,7 +60,7 @@ export default function AuthScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(typeof data.detail === 'string' ? data.detail : 'Controlla email e password e riprova');
+        setError(typeof data.detail === 'string' ? data.detail : t('auth.errGeneric'));
         return;
       }
 
@@ -92,7 +94,7 @@ export default function AuthScreen() {
       // percorso guidato come per un nuovo account.
       router.push('/onboarding/privacy');
     } catch (error) {
-      setError('Impossibile connettersi al server');
+      setError(t('auth.errConnect'));
     } finally {
       setLoading(false);
     }
@@ -112,14 +114,14 @@ export default function AuthScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
-            <Text style={styles.title}>{isLogin ? 'Accedi' : 'Registrati'}</Text>
+            <Text style={styles.title}>{isLogin ? t('auth.login') : t('auth.register')}</Text>
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>{t('auth.email')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="tuaemail@esempio.it"
+                  placeholder={t('auth.emailPlaceholder')}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -129,10 +131,10 @@ export default function AuthScreen() {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('auth.password')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Inserisci la password"
+                  placeholder={t('auth.passwordPlaceholder')}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -161,20 +163,20 @@ export default function AuthScreen() {
                 disabled={loading}
               >
                 <Text style={styles.buttonText}>
-                  {loading ? 'Caricamento...' : (isLogin ? 'Accedi' : 'Registrati')}
+                  {loading ? t('auth.loading') : (isLogin ? t('auth.login') : t('auth.register'))}
                 </Text>
               </Pressable>
 
               <Pressable onPress={() => { setIsLogin(!isLogin); setError(null); }}>
                 <Text style={styles.switchText}>
-                  {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
+                  {isLogin ? t('auth.noAccount') : t('auth.haveAccount')}
                 </Text>
               </Pressable>
             </View>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>oppure</Text>
+              <Text style={styles.dividerText}>{t('auth.or')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -182,7 +184,7 @@ export default function AuthScreen() {
               style={styles.guestButton}
               onPress={handleGuest}
             >
-              <Text style={styles.guestButtonText}>Continua come Guest</Text>
+              <Text style={styles.guestButtonText}>{t('auth.guest')}</Text>
             </Pressable>
           </View>
         </ScrollView>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useI18n } from '../i18n';
 
 interface PrivacyConsentProps {
   accepted: boolean;
@@ -11,16 +12,13 @@ interface PrivacyConsentProps {
 // per creare l'account: email, password, eta'/genere se indicati) e l'onboarding Guest
 // (obbligatoria per rispondere allo screening).
 export default function PrivacyConsent({ accepted, onToggle }: PrivacyConsentProps) {
+  const { t } = useI18n();
   return (
     <Pressable style={styles.container} onPress={onToggle}>
       <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
         {accepted && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
       </View>
-      <Text style={styles.text}>
-        Accetto la privacy policy e do il consenso al trattamento dei miei dati (email, e se
-        indicati età e genere) solo per il funzionamento dell'app e per analisi interne, mai
-        condivisi con terzi.
-      </Text>
+      <Text style={styles.text}>{t('consent.text')}</Text>
     </Pressable>
   );
 }

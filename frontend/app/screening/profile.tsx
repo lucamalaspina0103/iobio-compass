@@ -5,9 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import { AGE_RANGES, GENDERS } from '../../src/lib/profileOptions';
+import { useI18n } from '../../src/i18n';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { setUserProfile } = useAppContext();
   const [ageRange, setAgeRange] = useState('');
   const [gender, setGender] = useState('');
@@ -36,14 +38,12 @@ export default function ProfileScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             <Ionicons name="person-circle" size={64} color="#557A6D" />
-            <Text style={styles.title}>Profilo Rapido</Text>
-            <Text style={styles.subtitle}>
-              2 domande per personalizzare i tuoi suggerimenti
-            </Text>
+            <Text style={styles.title}>{t('quickProfile.title')}</Text>
+            <Text style={styles.subtitle}>{t('quickProfile.subtitle')}</Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Fascia d'età (opzionale)</Text>
+            <Text style={styles.label}>{t('profile.ageLabel') + t('profile.optional')}</Text>
             <View style={styles.optionsGrid}>
               {AGE_RANGES.map((range) => (
                 <TouchableOpacity
@@ -60,7 +60,7 @@ export default function ProfileScreen() {
                       ageRange === range.value && styles.optionTextSelected,
                     ]}
                   >
-                    {range.label}
+                    {t(range.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -68,7 +68,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Genere (opzionale)</Text>
+            <Text style={styles.label}>{t('profile.genderLabel') + t('profile.optional')}</Text>
             <View style={styles.optionsColumn}>
               {GENDERS.map((g) => (
                 <TouchableOpacity
@@ -90,7 +90,7 @@ export default function ProfileScreen() {
                       gender === g.value && styles.optionRowTextSelected,
                     ]}
                   >
-                    {g.label}
+                    {t(g.labelKey)}
                   </Text>
                   {gender === g.value && (
                     <Ionicons name="checkmark-circle" size={24} color="#557A6D" />
@@ -102,16 +102,14 @@ export default function ProfileScreen() {
 
           <View style={styles.infoBox}>
             <Ionicons name="information-circle" size={20} color="#557A6D" />
-            <Text style={styles.infoText}>
-              Questi dati ci aiutano a personalizzare i suggerimenti. Restano privati e non influenzano il tuo punteggio.
-            </Text>
+            <Text style={styles.infoText}>{t('quickProfile.note')}</Text>
           </View>
 
           <TouchableOpacity
             style={styles.button}
             onPress={handleContinue}
           >
-            <Text style={styles.buttonText}>Inizia lo Screening</Text>
+            <Text style={styles.buttonText}>{t('quickProfile.start')}</Text>
             <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
@@ -119,7 +117,7 @@ export default function ProfileScreen() {
             style={styles.skipButton}
             onPress={handleSkip}
           >
-            <Text style={styles.skipButtonText}>Salta per ora</Text>
+            <Text style={styles.skipButtonText}>{t('quickProfile.skip')}</Text>
           </TouchableOpacity>
 
         </View>

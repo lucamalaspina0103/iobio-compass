@@ -1,10 +1,7 @@
 // Nucleo delle traduzioni: funzioni pure, senza React e senza storage,
 // cosi' si usano anche nei moduli "di logica" (piano, notifiche, idee) e si testano in Node.
-import { it } from './locales/it';
-import { en } from './locales/en';
-import { fr } from './locales/fr';
-import { es } from './locales/es';
-import { de } from './locales/de';
+
+import { MESSAGES } from './messages';
 
 export type LangCode = 'it' | 'en' | 'fr' | 'es' | 'de';
 export type Dict = Record<string, string>;
@@ -21,7 +18,7 @@ export const LANGUAGES: { code: LangCode; name: string; locale: string }[] = [
 // Lingua di riserva quando manca una frase o la lingua del telefono non e' supportata
 export const FALLBACK_LANG: LangCode = 'en';
 
-const CATALOGS: Record<LangCode, Dict> = { it, en, fr, es, de };
+const CATALOGS: Record<LangCode, Dict> = MESSAGES;
 
 let current: LangCode = FALLBACK_LANG;
 const listeners = new Set<() => void>();

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AGE_RANGES, GENDERS } from '../lib/profileOptions';
+import { useI18n } from '../i18n';
 
 interface ProfileFieldsProps {
   ageRange: string;
@@ -20,11 +21,12 @@ export default function ProfileFields({
   onChangeGender,
   required = false,
 }: ProfileFieldsProps) {
+  const { t } = useI18n();
   return (
     <View>
       <View style={styles.section}>
         <Text style={styles.label}>
-          Fascia d'età{required ? '' : ' (opzionale)'}
+          {t('profile.ageLabel')}{required ? '' : t('profile.optional')}
         </Text>
         <View style={styles.optionsGrid}>
           {AGE_RANGES.map(range => (
@@ -34,7 +36,7 @@ export default function ProfileFields({
               onPress={() => onChangeAgeRange(range.value)}
             >
               <Text style={[styles.optionText, ageRange === range.value && styles.optionTextSelected]}>
-                {range.label}
+                {t(range.labelKey)}
               </Text>
             </Pressable>
           ))}
@@ -42,7 +44,7 @@ export default function ProfileFields({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.label}>Genere{required ? '' : ' (opzionale)'}</Text>
+        <Text style={styles.label}>{t('profile.genderLabel')}{required ? '' : t('profile.optional')}</Text>
         <View style={styles.optionsColumn}>
           {GENDERS.map(g => (
             <Pressable
@@ -56,7 +58,7 @@ export default function ProfileFields({
                 color={gender === g.value ? '#557A6D' : '#999'}
               />
               <Text style={[styles.optionRowText, gender === g.value && styles.optionRowTextSelected]}>
-                {g.label}
+                {t(g.labelKey)}
               </Text>
               {gender === g.value && <Ionicons name="checkmark-circle" size={22} color="#557A6D" />}
             </Pressable>
@@ -66,10 +68,7 @@ export default function ProfileFields({
 
       <View style={styles.infoBox}>
         <Ionicons name="information-circle" size={18} color="#557A6D" />
-        <Text style={styles.infoText}>
-          Questi dati restano privati, servono solo per analisi interne e non influenzano mai
-          i tuoi risultati. Puoi scegliere "Preferisco non dirlo".
-        </Text>
+        <Text style={styles.infoText}>{t('profile.note')}</Text>
       </View>
     </View>
   );

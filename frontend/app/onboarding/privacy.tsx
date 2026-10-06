@@ -4,15 +4,17 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
+import { useI18n } from '../../src/i18n';
 
 export default function PrivacyScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { setHasCompletedOnboarding } = useAppContext();
   const [accepted, setAccepted] = useState(false);
 
   const handleContinue = () => {
     if (!accepted) {
-      Alert.alert('Attenzione', 'Devi accettare la privacy policy per continuare');
+      Alert.alert(t('privacy.attention'), t('auth.errPrivacy'));
       return;
     }
     setHasCompletedOnboarding(true);
@@ -23,21 +25,21 @@ export default function PrivacyScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Privacy e Consenso</Text>
+          <Text style={styles.title}>{t('privacy.title')}</Text>
           
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>I tuoi dati sono al sicuro</Text>
+            <Text style={styles.sectionTitle}>{t('privacy.safeTitle')}</Text>
             <Text style={styles.text}>
-              • Utilizziamo i tuoi dati solo per fornirti un'esperienza personalizzata
+              {'• ' + t('privacy.b1')}
             </Text>
             <Text style={styles.text}>
-              • Non condivideremo mai i tuoi dati con terze parti
+              {'• ' + t('privacy.b2')}
             </Text>
             <Text style={styles.text}>
-              • Puoi eliminare il tuo account in qualsiasi momento
+              {'• ' + t('privacy.b3')}
             </Text>
             <Text style={styles.text}>
-              • I dati guest sono salvati solo sul tuo dispositivo
+              {'• ' + t('privacy.b4')}
             </Text>
           </View>
 
@@ -49,7 +51,7 @@ export default function PrivacyScreen() {
               {accepted && <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
             </View>
             <Text style={styles.checkboxText}>
-              Accetto la privacy policy e do il consenso al trattamento dei miei dati
+              {t('privacy.accept')}
             </Text>
           </TouchableOpacity>
 
@@ -58,7 +60,7 @@ export default function PrivacyScreen() {
             onPress={handleContinue}
             disabled={!accepted}
           >
-            <Text style={styles.buttonText}>Continua</Text>
+            <Text style={styles.buttonText}>{t('common.continue')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
