@@ -39,10 +39,23 @@
         }
       ],
       "expo-web-browser",
-      ["expo-notifications", { "icon": "./assets/images/notification-icon.png", "color": "#557A6D" }]
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#557A6D"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2a77d265-e5b0-4e48-ae19-66ff6a368633"
+      }
+    },
+    "owner": "luca70"
   }
 }
