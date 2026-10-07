@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../../src/contexts/AppContext';
 import { useI18n } from '../../src/i18n';
 import { serverMessage } from '../../src/lib/serverMessages';
+import { cleanMarkdown } from '../../src/lib/cleanMarkdown';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -127,7 +128,7 @@ export default function AICoachScreen() {
                     message.role === 'user' ? styles.userText : styles.assistantText,
                   ]}
                 >
-                  {message.greeting ? t('coach.greeting') : message.content}
+                  {message.greeting ? t('coach.greeting') : message.role === 'assistant' ? cleanMarkdown(message.content) : message.content}
                 </Text>
               </View>
             </View>
