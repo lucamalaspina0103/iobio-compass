@@ -1,10 +1,15 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../../src/i18n';
 
 export default function TabsLayout() {
   const { t } = useI18n();
+  // Su Android l'app disegna fino al bordo dello schermo: senza questo margine la barra
+  // finisce sotto i pulsanti/gesti del sistema e il menu non si vede.
+  const insets = useSafeAreaInsets();
+  const bottomSpace = Math.max(insets.bottom, 8);
   return (
     <Tabs
       screenOptions={{
@@ -15,9 +20,9 @@ export default function TabsLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E0E0E0',
-          paddingBottom: 8,
+          paddingBottom: bottomSpace,
           paddingTop: 8,
-          height: 64,
+          height: 56 + bottomSpace,
         },
         tabBarLabelStyle: {
           fontSize: 12,
